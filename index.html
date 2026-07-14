@@ -370,9 +370,11 @@
               <div class="form-grid two">
                 <label>ค่าเริ่มต้นเวรเช้าวันธรรมดา<select id="staffMorningBase"><option value="1">1 คน</option><option value="2">2 คน</option></select></label>
                 <label>จำนวน On call ต่อคืน<input id="staffOnCallCount" type="number" min="0" max="3" /></label>
+                <label>เพดานเวรจริง Staff/คน/เดือน<input id="staffMaxDuty" type="number" min="0" max="93" /></label>
+                <label>หมายเหตุ<span class="hint">นับเฉพาะเวรเช้า–บ่าย–ดึก ไม่รวม On call</span></label>
                 <label class="span-2">นโยบายเวรติดกัน<select id="staffConsecutivePolicy"><option value="strict">ห้ามติดกันทุกกรณี</option><option value="prefer">อนุโลมเมื่อจำเป็น โดย prefer บ่าย–ดึก</option><option value="allow">อนุโลมได้ แต่ยังพยายามหลีกเลี่ยง</option></select></label>
               </div>
-              <p class="hint">วันธรรมดาเลือกเวรเช้าได้ 1–2 คน และแก้จำนวนเป็นรายวันได้ในหน้า “วันหยุดและกิจกรรม” • จำนวนคนวันหยุดสามารถแยกจากวันธรรมดาได้ในตัวเลือกด้านล่าง</p>
+              <p class="hint">วันธรรมดาเลือกเวรเช้าได้ 1–2 คนและแก้เป็นรายวันได้ • เพดานเวรจริงเป็นค่าเริ่มต้นสำหรับ Staff ทุกคน โดยเพดานเฉพาะบุคคลในหน้าบุคลากรจะมีลำดับสูงกว่า • On call แยกเพดานต่างหาก</p>
             </article>
 
             <article class="card span-2" id="staffMorningDatesCard" hidden>
@@ -669,6 +671,10 @@ function personColorStyle(p){return `--person-color:${personColor(p)}`;}
 function personNameHtml(p){return `<span class="person-name-tag" style="${personColorStyle(p)}"><i></i><strong>${escapeHtml(p.name)}</strong></span>`;}
 function governmentWorkdayCount(){const key=`${state.year}-${state.month}-${holidayRevision}`;if(key!==workdayCacheKey){workdayCacheKey=key;const hm=holidayMap();workdayCacheValue=monthDates().filter(d=>isWeekday(d)&&!hm.has(d)).length;}return workdayCacheValue;}
 function staffMinTotal(p){if(p?.minTotalDuty!==null&&p?.minTotalDuty!==''&&!Number.isNaN(Number(p.minTotalDuty)))return Math.max(0,Number(p.minTotalDuty));return governmentWorkdayCount();}
+function staffActualCap(p){
+  if(p?.maxOverride!==null&&p?.maxOverride!==''&&!Number.isNaN(Number(p.maxOverride)))return Math.max(0,Number(p.maxOverride));
+  return Math.max(0,Number(state.settings.staffMaxDuty??20));
+}
 function staffMorningCount(date){
   if(isHoliday(date)&&state.settings.holidayStaffingDifferent)return clamp(Number(state.settings.staffHolidayReq?.M)||0,0,2);
   if(!isWeekday(date)||holidayMap().has(date))return 1;
@@ -708,7 +714,7 @@ function defaultPeople(mode){
 function defaultState(){
   const now=new Date();
   return {
-    version:7, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
+    version:8, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
     settings:{
       residentCaps:{R1:24,R2:23,R3:22,outBkk:7},
       residentReq:{M:{min:1,target:2,max:2,chief:true},E:{min:1,target:2,max:2,chief:true},N:{min:1,target:2,max:2,chief:true}},
@@ -716,7 +722,7 @@ function defaultState(){
       holidayStaffingDifferent:false,
       staffHolidayReq:{M:1,E:1,N:1},
       noAdjacent:true,avoid888:true,r1WedOff:true,strictRequests:false,
-      staffMorningBase:1,staffOnCallCount:1,staffConsecutivePolicy:'prefer',disclaimerAccepted:false,
+      staffMorningBase:1,staffOnCallCount:1,staffMaxDuty:20,staffConsecutivePolicy:'prefer',disclaimerAccepted:false,
       solverRelaxations:{allowRequestedOffBreak:false,allowLong888:false,weekdayMorningReducedDates:[]}
     },
     people:{resident:defaultPeople('resident'),staff:defaultPeople('staff')},
@@ -759,7 +765,7 @@ function migrateState(s){
   const d=defaultState();
   const oldVersion=Number(s.version||1);
   const migrated={
-    ...d,...s,version:7,
+    ...d,...s,version:8,
     settings:{
       ...d.settings,...(s.settings||{}),
       residentCaps:{...d.settings.residentCaps,...(s.settings?.residentCaps||{})},
@@ -944,7 +950,7 @@ function proportionalCap(total,half){
 }
 function halfCap(p,half){
   if(p.maxOverride!==null&&p.maxOverride!==''&&!Number.isNaN(Number(p.maxOverride)))return proportionalCap(Number(p.maxOverride),half);
-  if(state.mode==='staff')return 999;
+  if(state.mode==='staff')return staffActualCap(p);
   const sampleDate=isoDate(state.year,state.month,half===1?1:halfBoundary()+1),period=rotationPeriod(p,sampleDate);
   if(period==='out_province')return 0;
   if(period==='out_bkk')return proportionalCap(state.settings.residentCaps.outBkk,half);
@@ -974,7 +980,7 @@ function bindEvents(){
   document.querySelectorAll('.result-tab').forEach(b=>b.addEventListener('click',()=>showResult(b.dataset.result)));
   byId('monthSelect').addEventListener('change',e=>{state.month=Number(e.target.value);invalidateSchedule();ensureDatesInMonth();renderAll();saveState(false)});
   byId('yearInput').addEventListener('change',e=>{state.year=clamp(Number(e.target.value)||new Date().getFullYear(),2020,2100);invalidateSchedule();ensureDatesInMonth();renderAll();saveState(false)});
-  ['capR1','capR2','capR3','capOutBkk','resMMin','resMTarget','resMMax','resEMin','resETarget','resEMax','resNMin','resNTarget','resNMax','resHolMMin','resHolMTarget','resHolMMax','resHolEMin','resHolETarget','resHolEMax','resHolNMin','resHolNTarget','resHolNMax','staffMorningBase','staffOnCallCount','staffConsecutivePolicy','staffHolMCount','staffHolECount','staffHolNCount'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
+  ['capR1','capR2','capR3','capOutBkk','resMMin','resMTarget','resMMax','resEMin','resETarget','resEMax','resNMin','resNTarget','resNMax','resHolMMin','resHolMTarget','resHolMMax','resHolEMin','resHolETarget','resHolEMax','resHolNMin','resHolNTarget','resHolNMax','staffMorningBase','staffOnCallCount','staffMaxDuty','staffConsecutivePolicy','staffHolMCount','staffHolECount','staffHolNCount'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
   ['resMChief','resEChief','resNChief','resHolMChief','resHolEChief','resHolNChief','holidayStaffingDifferent','noAdjacent','avoid888','r1WedOff','strictRequests'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
   byId('btnSave').addEventListener('click',createNamedSnapshot);
   byId('btnSnapshots').addEventListener('click',openSavedWorkDialog);
@@ -1029,7 +1035,7 @@ function syncControlsFromState(){
   byId('holidayStaffingDifferent').checked=!!state.settings.holidayStaffingDifferent;
   byId('staffHolMCount').value=state.settings.staffHolidayReq.M;byId('staffHolECount').value=state.settings.staffHolidayReq.E;byId('staffHolNCount').value=state.settings.staffHolidayReq.N;
   byId('noAdjacent').checked=state.settings.noAdjacent; byId('avoid888').checked=state.settings.avoid888; byId('r1WedOff').checked=state.settings.r1WedOff; byId('strictRequests').checked=state.settings.strictRequests;
-  byId('staffMorningBase').value=state.settings.staffMorningBase; byId('staffOnCallCount').value=state.settings.staffOnCallCount; byId('staffConsecutivePolicy').value=state.settings.staffConsecutivePolicy; byId('disclaimerAccepted').checked=!!state.settings.disclaimerAccepted;
+  byId('staffMorningBase').value=state.settings.staffMorningBase; byId('staffOnCallCount').value=state.settings.staffOnCallCount; byId('staffMaxDuty').value=state.settings.staffMaxDuty??20; byId('staffConsecutivePolicy').value=state.settings.staffConsecutivePolicy; byId('disclaimerAccepted').checked=!!state.settings.disclaimerAccepted;
 }
 function readSettingsFromControls(){
   state.settings.residentCaps={R1:+byId('capR1').value,R2:+byId('capR2').value,R3:+byId('capR3').value,outBkk:+byId('capOutBkk').value};
@@ -1044,7 +1050,7 @@ function readSettingsFromControls(){
   state.settings.holidayStaffingDifferent=byId('holidayStaffingDifferent').checked;
   state.settings.staffHolidayReq={M:clamp(+byId('staffHolMCount').value||0,0,2),E:clamp(+byId('staffHolECount').value||0,0,2),N:clamp(+byId('staffHolNCount').value||0,0,2)};
   state.settings.noAdjacent=byId('noAdjacent').checked;state.settings.avoid888=byId('avoid888').checked;state.settings.r1WedOff=byId('r1WedOff').checked;state.settings.strictRequests=byId('strictRequests').checked;
-  state.settings.staffMorningBase=+byId('staffMorningBase').value;state.settings.staffOnCallCount=+byId('staffOnCallCount').value;state.settings.staffConsecutivePolicy=byId('staffConsecutivePolicy').value;
+  state.settings.staffMorningBase=+byId('staffMorningBase').value;state.settings.staffOnCallCount=+byId('staffOnCallCount').value;state.settings.staffMaxDuty=Math.max(0,+byId('staffMaxDuty').value||0);state.settings.staffConsecutivePolicy=byId('staffConsecutivePolicy').value;
   invalidateSchedule();renderAll();saveState(false);
 }
 function switchMode(mode){ state.mode=mode; ensureSelectedPerson(); document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode)); syncModeVisibility(); renderAll();saveState(false); }
@@ -1161,7 +1167,7 @@ function renderPeople(){
   const ps=people();
   const stats=state.mode==='resident'
     ? [['ทั้งหมด',ps.length],['R1',ps.filter(p=>p.level==='R1').length],['R2',ps.filter(p=>p.level==='R2').length],['R3',ps.filter(p=>p.level==='R3').length],['เป็น Chief ได้',ps.filter(p=>p.chiefEligible).length]]
-    : [['Staff ทั้งหมด',ps.length],['วันทำการราชการ',governmentWorkdayCount()],['ตั้งขั้นต่ำเฉพาะคน',ps.filter(p=>p.minTotalDuty!==null&&p.minTotalDuty!=='').length]];
+    : [['Staff ทั้งหมด',ps.length],['เพดานเริ่มต้น/คน',state.settings.staffMaxDuty??20],['วันทำการราชการ',governmentWorkdayCount()],['ตั้งเพดานเฉพาะคน',ps.filter(p=>p.maxOverride!==null&&p.maxOverride!=='').length]];
   byId('peopleStats').innerHTML=stats.map(([t,n])=>`<div class="stat-chip"><b>${n}</b>${t}</div>`).join('');
   const thead=byId('peopleTable').querySelector('thead'), tbody=byId('peopleTable').querySelector('tbody');
   if(state.mode==='resident'){
@@ -1169,13 +1175,13 @@ function renderPeople(){
     tbody.innerHTML=ps.map(p=>`<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}${p.note?`<br><small>${escapeHtml(p.note)}</small>`:''}</td><td><span class="pill blue">${p.level}</span></td><td>${p.chiefEligible?'<span class="pill green">ได้</span>':'—'}</td><td>${escapeHtml(ROTATION_LABELS[p.rotation]||p.rotation)}</td><td>${personCap(p)} <small>(ครึ่งแรก ${halfCap(p,1)} / ครึ่งหลัง ${halfCap(p,2)})</small></td><td>${conditionCountText(p)}</td><td><div class="action-btns"><button class="icon-btn" data-edit-person="${p.id}" title="แก้ไข">✎</button><button class="icon-btn" data-delete-person="${p.id}" title="ลบ">×</button></div></td></tr>`).join('');
   }else{
     thead.innerHTML='<tr><th>ชื่อ</th><th>ขั้นต่ำรวมเวร + On call</th><th>เพดานเวรจริง</th><th>เพดาน On call</th><th>เงื่อนไข</th><th>หมายเหตุ</th><th></th></tr>';
-    tbody.innerHTML=ps.map(p=>`<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}</td><td><strong>${staffMinTotal(p)}</strong>${p.minTotalDuty===null||p.minTotalDuty===''?'<br><small>ค่าเริ่มต้นตามวันทำการ</small>':''}</td><td>${p.maxOverride??'ไม่จำกัด'}</td><td>${p.onCallMax??'ไม่จำกัด'}</td><td>${conditionCountText(p)}</td><td>${escapeHtml(p.note||'—')}</td><td><div class="action-btns"><button class="icon-btn" data-edit-person="${p.id}">✎</button><button class="icon-btn" data-delete-person="${p.id}">×</button></div></td></tr>`).join('');
+    tbody.innerHTML=ps.map(p=>`<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}</td><td><strong>${staffMinTotal(p)}</strong>${p.minTotalDuty===null||p.minTotalDuty===''?'<br><small>ค่าเริ่มต้นตามวันทำการ</small>':''}</td><td><strong>${staffActualCap(p)}</strong>${p.maxOverride===null||p.maxOverride===''?'<br><small>ค่าเริ่มต้นจากหน้าแรก</small>':'<br><small>กำหนดเฉพาะบุคคล</small>'}</td><td>${p.onCallMax??'ไม่จำกัด'}</td><td>${conditionCountText(p)}</td><td>${escapeHtml(p.note||'—')}</td><td><div class="action-btns"><button class="icon-btn" data-edit-person="${p.id}">✎</button><button class="icon-btn" data-delete-person="${p.id}">×</button></div></td></tr>`).join('');
   }
 }
 function conditionCountText(p){ ensurePersonConditions(p);const n=['off','avoid','request'].reduce((sum,type)=>sum+p.conditions[type].reduce((a,c)=>a+c.shifts.length,0),0); return n?`${n} ช่อง${p.conditions.weekendOffCount?` • off weekend ${p.conditions.weekendOffCount}`:''}`:(p.conditions.weekendOffCount?`off weekend ${p.conditions.weekendOffCount}`:'—'); }
 function openPersonDialog(p=null){
   byId('personDialogTitle').textContent=p?'แก้ไขบุคลากร':'เพิ่มบุคลากร';
-  byId('personId').value=p?.id||'';byId('personName').value=p?.name||'';byId('personLevel').value=p?.level||'R1';byId('personChief').checked=!!p?.chiefEligible;byId('personRotation').value=p?.rotation||'inside_all';byId('dialogMaxOverride').value=p?.maxOverride??'';byId('dialogOnCallMax').value=p?.onCallMax??7;byId('dialogMinTotalDuty').value=p?.minTotalDuty??'';byId('dialogMinTotalDuty').placeholder=`ค่าเริ่มต้นเดือนนี้ = ${governmentWorkdayCount()} เวร`;byId('personNote').value=p?.note||'';
+  byId('personId').value=p?.id||'';byId('personName').value=p?.name||'';byId('personLevel').value=p?.level||'R1';byId('personChief').checked=!!p?.chiefEligible;byId('personRotation').value=p?.rotation||'inside_all';byId('dialogMaxOverride').value=p?.maxOverride??'';byId('dialogMaxOverride').placeholder=state.mode==='staff'?`เว้นว่าง = ${state.settings.staffMaxDuty??20} เวร`:'ใช้ค่าตามระดับ';byId('dialogOnCallMax').value=p?.onCallMax??7;byId('dialogMinTotalDuty').value=p?.minTotalDuty??'';byId('dialogMinTotalDuty').placeholder=`ค่าเริ่มต้นเดือนนี้ = ${governmentWorkdayCount()} เวร`;byId('personNote').value=p?.note||'';
   byId('personDialog').showModal();
 }
 function savePersonFromDialog(e){
@@ -1194,7 +1200,7 @@ function renderConditionUI(){
   byId('conditionPersonList').innerHTML=people().length?people().map(x=>`<button class="person-pick ${x.id===p?.id?'active':''}" style="${personColorStyle(x)}" data-select-condition-person="${x.id}"><span class="person-picker-color"></span><strong>${escapeHtml(x.name)}</strong><small>${state.mode==='resident'?`${x.level} • ${ROTATION_LABELS[x.rotation]}`:`Staff • ขั้นต่ำรวม ${staffMinTotal(x)} เวร`}</small></button>`).join(''):'<div class="alert warning">ยังไม่มีรายชื่อ</div>';
   if(!p){byId('conditionHero').innerHTML='<h3>กรุณาเพิ่มรายชื่อก่อน</h3>';byId('conditionCalendar').innerHTML='';return;}
   ensurePersonConditions(p);
-  byId('conditionHero').innerHTML=`<div class="condition-person-head" style="${personColorStyle(p)}"><span></span><div><h3>${escapeHtml(p.name)}</h3><p>${state.mode==='resident'?`${p.level} • ${ROTATION_LABELS[p.rotation]} • เพดาน ${personCap(p)} เวร`:`Staff • ขั้นต่ำรวม ${staffMinTotal(p)} เวร • เพดานเวรจริง ${p.maxOverride??'ไม่จำกัด'} • On call ${p.onCallMax??'ไม่จำกัด'}`}</p></div></div>`;
+  byId('conditionHero').innerHTML=`<div class="condition-person-head" style="${personColorStyle(p)}"><span></span><div><h3>${escapeHtml(p.name)}</h3><p>${state.mode==='resident'?`${p.level} • ${ROTATION_LABELS[p.rotation]} • เพดาน ${personCap(p)} เวร`:`Staff • ขั้นต่ำรวม ${staffMinTotal(p)} เวร • เพดานเวรจริง ${staffActualCap(p)} • On call ${p.onCallMax??'ไม่จำกัด'}`}</p></div></div>`;
   byId('weekendOffCount').value=p.conditions.weekendOffCount||0;byId('personMaxOverride').value=p.maxOverride??'';byId('personOnCallMax').value=p.onCallMax??'';byId('personMinTotalDuty').value=p.minTotalDuty??'';byId('personMinTotalDuty').placeholder=`ค่าเริ่มต้นเดือนนี้ = ${governmentWorkdayCount()} เวร`;
   byId('conditionMonthBadge').textContent=`${MONTHS_TH[state.month]} ${state.year+543}`;
   updatePaintToolbar();renderConditionCalendar(p);renderConditionList(p);
@@ -1353,7 +1359,7 @@ function preflightChecks(){
     const chiefs=ps.filter(p=>p.chiefEligible&&p.rotation!=='out_province_all').length,needChief=[...Object.values(state.settings.residentReq),...(state.settings.holidayStaffingDifferent?Object.values(state.settings.residentHolidayReq):[])].some(x=>x.chief);checks.push({ok:!needChief||chiefs>0,text:needChief?`มีผู้เป็น Chief ได้ ${chiefs} คน`:'ไม่ได้บังคับ Chief'});
     const totalCap=ps.reduce((a,p)=>a+personCap(p),0);checks.push({ok:totalCap>=d.actual,text:`โควตารวมโดยประมาณ ${totalCap} เทียบกับความต้องการ ${d.actual} ตำแหน่ง`});
   }else{
-    const realCap=ps.reduce((a,p)=>a+(p.maxOverride??999),0),ocCap=ps.reduce((a,p)=>a+(p.onCallMax??999),0),minTotal=ps.reduce((a,p)=>a+staffMinTotal(p),0),available=d.actual+d.oncall;checks.push({ok:realCap>=d.actual,text:`เพดานเวรจริงรวม ${realCap>=900?'ไม่จำกัด':realCap} เทียบความต้องการ ${d.actual}`});if(d.oncall)checks.push({ok:ocCap>=d.oncall,text:`เพดาน On call รวม ${ocCap>=900?'ไม่จำกัด':ocCap} เทียบความต้องการ ${d.oncall}`});checks.push({ok:available>=minTotal,text:`ตำแหน่งทั้งหมด ${available} เทียบกับผลรวมขั้นต่ำรายบุคคล ${minTotal}`});
+    const realCap=ps.reduce((a,p)=>a+staffActualCap(p),0),ocCap=ps.reduce((a,p)=>a+(p.onCallMax??999),0),minTotal=ps.reduce((a,p)=>a+staffMinTotal(p),0),available=d.actual+d.oncall;checks.push({ok:realCap>=d.actual,text:`เพดานเวรจริงรวม ${realCap} เทียบความต้องการ ${d.actual}`});if(d.oncall)checks.push({ok:ocCap>=d.oncall,text:`เพดาน On call รวม ${ocCap>=900?'ไม่จำกัด':ocCap} เทียบความต้องการ ${d.oncall}`});checks.push({ok:available>=minTotal,text:`ตำแหน่งทั้งหมด ${available} เทียบกับผลรวมขั้นต่ำรายบุคคล ${minTotal}`});
   }
   const conds=ps.reduce((a,p)=>{ensurePersonConditions(p);return a+p.conditions.hardOff.length+p.conditions.off.length+p.conditions.avoid.length+p.conditions.request.length;},0);checks.push({ok:true,text:`บันทึกเงื่อนไขแบบระบุวัน ${conds} รายการ`});
   const requestSlots=buildSlots(),requestBlocks=buildWeekendBlocks();let impossibleRequests=0;
@@ -1449,7 +1455,7 @@ function createTrialStats(ps){const stats={};for(const p of ps)stats[p.id]={tota
 function hardEligible(p,slot,stats,assignments,weekendBlocks){
   if(!staticEligible(p,slot,weekendBlocks))return false;const st=stats[p.id];
   if(slot.shift==='OC'){if(p.onCallMax!==null&&p.onCallMax!==''&&st.oncall>=Number(p.onCallMax))return false;if(assignments.some(a=>a.personId===p.id&&a.date===slot.date&&a.shift==='OC'))return false;return true;}
-  if(p.maxOverride!==null&&p.maxOverride!==''&&state.mode==='staff'&&st.actual>=Number(p.maxOverride))return false;
+  if(state.mode==='staff'&&st.actual>=staffActualCap(p))return false;
   if(state.mode==='resident'){if(st.actual>=personCap(p))return false;if(st.half[halfOfDate(slot.date)]>=halfCap(p,halfOfDate(slot.date)))return false;}
   if(assignments.some(a=>a.personId===p.id&&a.start===slot.start&&a.shift!=='OC'))return false;
   const consecutiveHard=state.mode==='resident'?state.settings.noAdjacent:state.settings.staffConsecutivePolicy==='strict';if(consecutiveHard&&st.starts.some(x=>Math.abs(x-slot.start)===8))return false;
@@ -1471,7 +1477,7 @@ function candidateScore(p,slot,stats){
     if(requestMatches(p,slot.date,slot.shift))score-=140;
     return score;
   }
-  const cap=state.mode==='resident'?Math.max(1,personCap(p)):Math.max(1,p.maxOverride??Math.ceil(daysInMonth(state.year,state.month)*4/Math.max(1,people().length))+5);
+  const cap=state.mode==='resident'?Math.max(1,personCap(p)):Math.max(1,staffActualCap(p));
   score+=(st.actual/cap)*60+st.weight*2;const ns=normalizedShift(slot.shift);score+=(st.shifts[slot.shift]||0)*8;if(ns==='M')score+=((st.shifts.M||0)+(st.shifts.M1||0)+(st.shifts.M2||0))*5;
   if(isHoliday(slot.date))score+=st.holiday*13;if(avoidMatches(p,slot.date,slot.shift))score+=260;if(requestedOffMatches(p,slot.date,slot.shift))score+=900;if(requestMatches(p,slot.date,slot.shift))score-=420;
   const adj=st.starts.filter(x=>Math.abs(x-slot.start)===8);if(adj.length){if(state.mode==='staff'){const prior=st.starts.find(x=>x===slot.start-8);const pair=prior!==undefined&&slot.shift==='N';score+=state.settings.staffConsecutivePolicy==='prefer'?(pair?28:100):18;}else score+=90;}
@@ -1567,7 +1573,7 @@ function buildExactSolverPayload(){
     year:state.year,
     month:state.month,
     settings:deepClone(state.settings),
-    people:deepClone(people()).map(p=>({...p,computedMinTotal:state.mode==='staff'?staffMinTotal(p):null})),
+    people:deepClone(people()).map(p=>({...p,computedMinTotal:state.mode==='staff'?staffMinTotal(p):null,computedMaxActual:state.mode==='staff'?staffActualCap(p):null})),
     holidays:deepClone(state.holidays||[]),
     staffSpecials:deepClone(state.staffSpecials||[]),
     slots:deepClone(buildSlots()),
@@ -1842,7 +1848,7 @@ function renderPersonalSchedule(){
   byId('personalSchedule').innerHTML=summary+calendar;
 }
 function renderSummarySchedule(){
-  const s=schedule();const rows=people().map(p=>{const st=s.stats[p.id]||{shifts:{},half:{}};const morning=(st.shifts.M||0)+(st.shifts.M1||0)+(st.shifts.M2||0);return `<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}</td>${state.mode==='resident'?`<td>${p.level}</td><td>${st.actual||0} / ${personCap(p)}</td><td>${st.half?.[1]||0} / ${halfCap(p,1)}</td><td>${st.half?.[2]||0} / ${halfCap(p,2)}</td>`:`<td><strong>${st.total||0} / ${staffMinTotal(p)}</strong></td><td>${st.actual||0}${p.maxOverride!==null?` / ${p.maxOverride}`:''}</td>`}<td>${morning}</td><td>${st.shifts.E||0}</td><td>${st.shifts.N||0}</td><td>${st.holiday||0}</td>${state.mode==='staff'?`<td>${st.oncall||0}${p.onCallMax!==null?` / ${p.onCallMax}`:''}</td><td>${Number(st.weight||0).toFixed(2)}</td>`:''}</tr>`;}).join('');
+  const s=schedule();const rows=people().map(p=>{const st=s.stats[p.id]||{shifts:{},half:{}};const morning=(st.shifts.M||0)+(st.shifts.M1||0)+(st.shifts.M2||0);return `<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}</td>${state.mode==='resident'?`<td>${p.level}</td><td>${st.actual||0} / ${personCap(p)}</td><td>${st.half?.[1]||0} / ${halfCap(p,1)}</td><td>${st.half?.[2]||0} / ${halfCap(p,2)}</td>`:`<td><strong>${st.total||0} / ${staffMinTotal(p)}</strong></td><td>${st.actual||0} / ${staffActualCap(p)}</td>`}<td>${morning}</td><td>${st.shifts.E||0}</td><td>${st.shifts.N||0}</td><td>${st.holiday||0}</td>${state.mode==='staff'?`<td>${st.oncall||0}${p.onCallMax!==null?` / ${p.onCallMax}`:''}</td><td>${Number(st.weight||0).toFixed(2)}</td>`:''}</tr>`;}).join('');
   const headers=state.mode==='resident'?['ชื่อ','ระดับ','รวม/เพดาน','ครึ่งแรก','ครึ่งหลัง','เช้า','บ่าย','ดึก','วันหยุด']:['ชื่อ','รวม/ขั้นต่ำ','เวรจริง','เช้า','บ่าย','ดึก','วันหยุด','On call','ภาระงานถ่วงน้ำหนัก'];
   byId('summarySchedule').innerHTML=`<div class="schedule-table-wrap"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>${state.mode==='staff'?'<p class="hint" style="margin-top:10px">จำนวน “รวม/ขั้นต่ำ” นับเวรจริงทุกตำแหน่งรวม On call • Staff 2 ปกติคิดภาระงาน 0.65 เวร และวัน Activity ถึง 10:00 น. คิด 0.25 เวร</p>':''}`;
 }

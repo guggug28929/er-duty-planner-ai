@@ -264,7 +264,9 @@ def solve_schedule(payload):
                 ]
                 model.add(sum(x[(pi, si)] for si in indices) <= cap)
         else:
-            max_actual = person.get("maxOverride")
+            max_actual = person.get("computedMaxActual")
+            if max_actual in (None, ""):
+                max_actual = person.get("maxOverride")
             if max_actual not in (None, ""):
                 model.add(actual <= int(max_actual))
             max_oc = person.get("onCallMax")
@@ -407,7 +409,9 @@ def solve_schedule(payload):
         if mode == "resident":
             effective_caps.append(max(1, min(eligible_actual, person_half_cap(person, 1, payload) + person_half_cap(person, 2, payload))))
         else:
-            maximum = person.get("maxOverride")
+            maximum = person.get("computedMaxActual")
+            if maximum in (None, ""):
+                maximum = person.get("maxOverride")
             effective_caps.append(max(1, min(eligible_actual, int(maximum) if maximum not in (None, "") else eligible_actual)))
 
     total_actual_slots = len(actual_slot_indices)
