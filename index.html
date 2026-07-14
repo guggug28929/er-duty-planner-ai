@@ -32,6 +32,18 @@
 .condition-cell.condition-unavailable{background:#f1f5f9!important;color:#94a3b8!important;border-color:#cbd5e1!important;border-style:dashed;cursor:not-allowed;box-shadow:none!important}
 .condition-cell.condition-unavailable:hover{transform:none;filter:none}
 
+
+.ai-audit-panel{margin:0 0 16px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.ai-audit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ai-audit-head h3{margin:0 0 4px}.ai-audit-head p{margin:0;color:var(--muted);font-size:12px}
+.ai-audit-status{display:inline-flex;align-items:center;border-radius:999px;padding:7px 11px;font-weight:900;font-size:12px}
+.ai-audit-status.pass{background:#dcfce7;color:#166534}.ai-audit-status.warning{background:#fef3c7;color:#92400e}.ai-audit-status.fail{background:#fee2e2;color:#b91c1c}
+.ai-audit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ai-audit-box{border:1px solid var(--line);border-radius:13px;padding:13px;background:#fbfdfd}
+.ai-audit-box h4{margin:0 0 9px}.ai-audit-item{border-left:4px solid #dc2626;background:#fff5f5;border-radius:9px;padding:9px 10px;margin:7px 0;font-size:12px;line-height:1.5}
+.ai-audit-item.soft{border-left-color:#d97706;background:#fffaf0}.ai-explanation{white-space:pre-line;line-height:1.65;background:#eef8f7;border-radius:12px;padding:13px;margin-top:12px}
+.ai-audit-loading{display:flex;align-items:center;gap:10px;color:var(--muted)}
+@media(max-width:760px){.ai-audit-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -230,9 +242,16 @@
         <section class="page" id="page-results">
           <div class="page-heading">
             <div><span class="eyebrow">STEP 6</span><h2>ตารางเวรและสรุปผล</h2><p>ดูได้ทั้งรายวัน รายบุคคล และสรุปจำนวนเวร</p></div>
-            <div class="button-row"><button class="btn ghost" id="btnPrint">พิมพ์ / บันทึก PDF</button><button class="btn secondary" id="btnExportCsv">ดาวน์โหลด CSV</button></div>
+            <div class="button-row"><button class="btn primary" id="btnAiAudit">AI ตรวจสอบตาราง</button><button class="btn ghost" id="btnPrint">พิมพ์ / บันทึก PDF</button><button class="btn secondary" id="btnExportCsv">ดาวน์โหลด CSV</button></div>
           </div>
           <div class="result-tabs"><button class="result-tab active" data-result="daily">ตารางรายวัน</button><button class="result-tab" data-result="personal">รายบุคคล</button><button class="result-tab" data-result="summary">สรุปโควตา</button><button class="result-tab" data-result="issues">ข้อเสนอแนะ</button></div>
+          <section id="aiAuditPanel" class="ai-audit-panel" hidden>
+            <div class="ai-audit-head">
+              <div><h3>ผลตรวจตารางจาก Validator + AI</h3><p>Validator เป็นผู้ตัดสิน Hard constraints ส่วน AI ช่วยอธิบายผล</p></div>
+              <span id="aiAuditStatus" class="ai-audit-status">ยังไม่ตรวจ</span>
+            </div>
+            <div id="aiAuditContent"></div>
+          </section>
           <div class="result-panel active" id="result-daily"><div id="dailySchedule"></div></div>
           <div class="result-panel" id="result-personal"><div class="personal-toolbar"><label>เลือกบุคลากร<select id="personalSelect"></select></label></div><div id="personalSchedule"></div></div>
           <div class="result-panel" id="result-summary"><div id="summarySchedule"></div></div>
@@ -455,6 +474,7 @@ function bindEvents(){
   byId('btnFetchHolidays').addEventListener('click',fetchThaiHolidays);
   byId('btnAddStaffSpecial').addEventListener('click',addStaffSpecial);
   byId('btnGenerate').addEventListener('click',generateSchedule);
+  byId('btnAiAudit').addEventListener('click',runAiScheduleAudit);
   byId('personalSelect').addEventListener('change',renderPersonalSchedule);
   byId('btnExportCsv').addEventListener('click',exportCsv);
   byId('btnPrint').addEventListener('click',()=>window.print());
@@ -851,6 +871,60 @@ async function generateSchedule(){
   const wbObj={};for(const [id,v] of weekendBlocks)wbObj[id]=v.weekends;
   state.schedules[state.mode]={mode:state.mode,year:state.year,month:state.month,createdAt:new Date().toISOString(),slots,assignments:chosen.assignments,unfilled:chosen.unfilled,stats:chosen.stats,issues:chosen.issues,score:chosen.score,weekendBlocks:wbObj};
   saveState(false);byId('solverProgress').hidden=true;byId('btnGenerate').disabled=false;renderGeneratePage();renderResults();showPage('results');toast(chosen.unfilled.length?`จัดได้บางส่วน ยังว่าง ${chosen.unfilled.length} ตำแหน่ง`:(previousSignature&&scheduleSignature(chosen)!==previousSignature?'จัดตารางใหม่ให้แล้ว':'จัดเวรครบแล้ว'));
+}
+
+
+function buildAuditPlannerState(){
+  const mode=state.mode,s=schedule();
+  return {
+    version:state.version,
+    mode,
+    year:state.year,
+    month:state.month,
+    settings:deepClone(state.settings),
+    people:{[mode]:deepClone(people())},
+    holidays:deepClone(state.holidays||[]),
+    staffSpecials:deepClone(state.staffSpecials||[]),
+    schedules:{[mode]:deepClone(s)}
+  };
+}
+
+function auditViolationHtml(item,type){
+  return `<div class="ai-audit-item ${type==='soft'?'soft':''}"><strong>${escapeHtml(item.code||'UNKNOWN')}</strong><div>${escapeHtml(item.message||'')}</div></div>`;
+}
+
+function renderAiAuditResult(data){
+  const panel=byId('aiAuditPanel'),status=byId('aiAuditStatus'),content=byId('aiAuditContent'),audit=data.audit;
+  panel.hidden=false;
+  const quality=(audit.qualityStatus||audit.status||'FAIL').toLowerCase();
+  status.className=`ai-audit-status ${quality}`;
+  status.textContent=audit.qualityStatus==='WARNING'?'ผ่าน Hard แต่มีข้อควรเลี่ยง':audit.status==='PASS'?'ผ่าน Hard constraints':'ไม่ผ่าน Hard constraints';
+  const hard=audit.hardViolations||[],soft=audit.softViolations||[];
+  content.innerHTML=`
+    <div class="ai-audit-grid">
+      <div class="ai-audit-box"><h4>Hard violations (${hard.length})</h4>${hard.length?hard.map(x=>auditViolationHtml(x,'hard')).join(''):'<p class="hint">ไม่พบ Hard violation</p>'}</div>
+      <div class="ai-audit-box"><h4>Soft violations (${soft.length})</h4>${soft.length?soft.map(x=>auditViolationHtml(x,'soft')).join(''):'<p class="hint">ไม่พบ Soft violation</p>'}</div>
+    </div>
+    <div class="ai-explanation"><strong>คำอธิบายจาก AI</strong><br>${escapeHtml(data.aiExplanation||'ไม่มีคำอธิบายจาก AI')}</div>`;
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+async function runAiScheduleAudit(){
+  const s=schedule();
+  if(!s||s.year!==state.year||s.month!==state.month){toast('กรุณาจัดเวรเดือนนี้ก่อนตรวจด้วย AI');return;}
+  const panel=byId('aiAuditPanel'),status=byId('aiAuditStatus'),content=byId('aiAuditContent'),button=byId('btnAiAudit');
+  panel.hidden=false;status.className='ai-audit-status warning';status.textContent='กำลังตรวจ';
+  content.innerHTML='<div class="ai-audit-loading"><div class="spinner"></div><span>Validator กำลังตรวจทุกเงื่อนไข แล้วส่งผลให้ AI อธิบาย…</span></div>';
+  button.disabled=true;
+  try{
+    const response=await fetch('/api/audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plannerState:buildAuditPlannerState()})});
+    const data=await response.json();
+    if(!response.ok||!data.ok)throw new Error(data.message||'ตรวจตารางไม่สำเร็จ');
+    renderAiAuditResult(data);
+  }catch(error){
+    status.className='ai-audit-status fail';status.textContent='เชื่อมต่อไม่สำเร็จ';
+    content.innerHTML=`<div class="alert danger">${escapeHtml(error.message||'เกิดข้อผิดพลาด')}</div>`;
+  }finally{button.disabled=false;}
 }
 
 function renderResults(){
