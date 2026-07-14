@@ -89,6 +89,10 @@ def normalized_shift(shift):
     return "M" if shift in ("M1", "M2") else shift
 
 
+def resident_level_rank(person):
+    return {"R1": 1, "R2": 2, "R3": 3}.get(person.get("level"), 0)
+
+
 def solve_schedule(payload):
     started = time.perf_counter()
     mode = payload.get("mode")
@@ -177,6 +181,37 @@ def solve_schedule(payload):
             "reasons": impossible_reasons,
             "wallTimeSeconds": round(time.perf_counter() - started, 4),
         }
+
+    # Resident: หากผู้ร่วมเวรที่เป็น Chief ได้มีหลายชั้นปี
+    # ผู้ที่มีชั้นปีสูงที่สุดในเวรนั้นต้องรับตำแหน่ง Chief
+    if mode == "resident":
+        shift_groups = {}
+        for si, slot in enumerate(slots):
+            if slot.get("shift") == "OC":
+                continue
+            group_key = (slot.get("date"), normalized_shift(slot.get("shift")))
+            shift_groups.setdefault(group_key, []).append(si)
+
+        for group_indices in shift_groups.values():
+            chief_indices = [
+                si for si in group_indices if slots[si].get("role") == "Chief"
+            ]
+            if not chief_indices:
+                continue
+
+            for low_index, low_person in enumerate(people):
+                if not low_person.get("chiefEligible"):
+                    continue
+                low_rank = resident_level_rank(low_person)
+                low_chief = sum(x[(low_index, si)] for si in chief_indices)
+
+                for high_index, high_person in enumerate(people):
+                    if not high_person.get("chiefEligible"):
+                        continue
+                    if resident_level_rank(high_person) <= low_rank:
+                        continue
+                    high_assigned = sum(x[(high_index, si)] for si in group_indices)
+                    model.add(low_chief + high_assigned <= 1)
 
     actual_slot_indices = [si for si, slot in enumerate(slots) if slot.get("shift") != "OC"]
     oc_slot_indices = [si for si, slot in enumerate(slots) if slot.get("shift") == "OC"]
