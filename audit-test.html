@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ER Duty Planner — Hybrid Audit Test</title>
+  <style>
+    :root {
+      font-family: Inter, "Noto Sans Thai", Tahoma, sans-serif;
+      color: #17323b;
+      background: #f3f7f7;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 28px; }
+    main { max-width: 980px; margin: 0 auto; }
+    .card {
+      background: #fff;
+      border: 1px solid #dbe7e8;
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 12px 28px rgba(23, 50, 59, .08);
+    }
+    h1 { margin: 0 0 8px; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    p { line-height: 1.65; }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 18px;
+      background: #0f766e;
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    .status {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 900;
+    }
+    .status.fail { background: #fee2e2; color: #b91c1c; }
+    .status.pass { background: #dcfce7; color: #166534; }
+    .violation {
+      border-left: 5px solid #dc2626;
+      background: #fff7f7;
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin: 9px 0;
+    }
+    .soft { border-left-color: #d97706; background: #fffaf0; }
+    .muted { color: #64777e; }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #10282f;
+      color: #e8ffff;
+      border-radius: 12px;
+      padding: 16px;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>ทดสอบระบบตรวจตาราง + AI</h1>
+      <p class="muted">
+        ตัว Validator ตรวจเงื่อนไขด้วยโค้ดก่อน แล้ว AI ช่วยอธิบายผลเป็นภาษาไทย
+        ชุดทดสอบนี้ตั้งใจใส่ข้อผิดพลาดไว้หลายจุด
+      </p>
+      <button id="runButton">เริ่มทดสอบ</button>
+    </section>
+
+    <section class="card" id="resultCard" hidden>
+      <h2>ผลจาก Validator</h2>
+      <div id="statusBox"></div>
+      <div id="hardList"></div>
+      <div id="softList"></div>
+    </section>
+
+    <section class="card" id="aiCard" hidden>
+      <h2>คำอธิบายจาก AI</h2>
+      <p id="aiText"></p>
+    </section>
+
+    <section class="card" id="rawCard" hidden>
+      <h2>ข้อมูล JSON สำหรับตรวจสอบ</h2>
+      <pre id="rawJson"></pre>
+    </section>
+  </main>
+
+  <script>
+    const runButton = document.getElementById("runButton");
+    const resultCard = document.getElementById("resultCard");
+    const aiCard = document.getElementById("aiCard");
+    const rawCard = document.getElementById("rawCard");
+    const statusBox = document.getElementById("statusBox");
+    const hardList = document.getElementById("hardList");
+    const softList = document.getElementById("softList");
+    const aiText = document.getElementById("aiText");
+    const rawJson = document.getElementById("rawJson");
+
+    function renderViolations(title, items, className = "") {
+      if (!items.length) {
+        return `<p class="muted">${title}: ไม่มี</p>`;
+      }
+
+      return `
+        <h2>${title} (${items.length})</h2>
+        ${items.map((item) => `
+          <div class="violation ${className}">
+            <strong>${item.code}</strong>
+            <div>${item.message}</div>
+          </div>
+        `).join("")}
+      `;
+    }
+
+    runButton.addEventListener("click", async () => {
+      runButton.disabled = true;
+      runButton.textContent = "กำลังตรวจและเรียก AI…";
+
+      try {
+        const response = await fetch("/api/audit-test");
+        const data = await response.json();
+
+        if (!response.ok || !data.ok) {
+          throw new Error(data.message || "ทดสอบไม่สำเร็จ");
+        }
+
+        const audit = data.validator;
+        statusBox.innerHTML = `
+          <p>
+            สถานะ:
+            <span class="status ${audit.status === "PASS" ? "pass" : "fail"}">
+              ${audit.status}
+            </span>
+          </p>
+          <p class="muted">
+            Hard ${audit.summary.hardViolationCount} จุด ·
+            Soft ${audit.summary.softViolationCount} จุด
+          </p>
+        `;
+
+        hardList.innerHTML = renderViolations(
+          "Hard violations",
+          audit.hardViolations
+        );
+        softList.innerHTML = renderViolations(
+          "Soft violations",
+          audit.softViolations,
+          "soft"
+        );
+
+        aiText.textContent = data.aiExplanation;
+        rawJson.textContent = JSON.stringify(data, null, 2);
+
+        resultCard.hidden = false;
+        aiCard.hidden = false;
+        rawCard.hidden = false;
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        runButton.disabled = false;
+        runButton.textContent = "ทดสอบอีกครั้ง";
+      }
+    });
+  </script>
+</body>
+</html>

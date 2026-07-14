@@ -1,9 +1,9 @@
 {
   "name": "er-duty-planner-ai",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "ER Duty Planner with Vercel backend and AI-assisted schedule audit",
+  "description": "ER Duty Planner with deterministic validator and AI-assisted audit explanation",
   "engines": {
     "node": ">=20"
   },
