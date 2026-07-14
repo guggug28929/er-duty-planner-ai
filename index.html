@@ -80,7 +80,7 @@
         </nav>
         <div class="sidebar-note">
           <strong>ข้อมูลอยู่ในเครื่องนี้</strong>
-          <p>เวอร์ชันนี้บันทึกข้อมูลในเครื่องและยังใช้ตัวจัดเวรออฟไลน์ชั่วคราว การใช้งานจริงควรเชื่อม Exact Solver บนเซิร์ฟเวอร์</p>
+          <p>ข้อมูลเก็บในเครื่อง • Exact Solver ทำงานบนเซิร์ฟเวอร์ • หลังจัดเสร็จ Validator และ AI จะตรวจตารางซ้ำอัตโนมัติ</p>
         </div>
       </aside>
 
@@ -135,7 +135,7 @@
               <h3>ข้อจำกัดการพัก</h3>
               <div class="toggle-list">
                 <label class="toggle-row"><input id="noAdjacent" type="checkbox"><span><b>ห้ามอยู่เวรติดกัน</b><small>เช้า→บ่าย, บ่าย→ดึก, ดึก→เช้าวันถัดไป</small></span></label>
-                <label class="toggle-row"><input id="avoid888" type="checkbox"><span><b>หลีกเลี่ยงรูปแบบ 8 เว้น 8 เว้น 8</b><small>เช้า→ดึก→บ่ายวันถัดไป หรือรูปแบบเทียบเท่า</small></span></label>
+                <label class="toggle-row"><input id="avoid888" type="checkbox"><span><b>ห้ามพัก 8 ชั่วโมงต่อเนื่องเกิน 3 เวร</b><small>เช้า→ดึก→บ่าย ทำได้ แต่ห้ามต่อเช้าเป็นเวรที่ 4 หรือรูปแบบเทียบเท่า</small></span></label>
                 <label class="toggle-row" id="r1WedWrap"><input id="r1WedOff" type="checkbox"><span><b>Resident 1 off พุธเช้า</b><small>สำหรับเรียน Basic science</small></span></label>
                 <label class="toggle-row"><input id="strictRequests" type="checkbox"><span><b>คำขออยู่เวรเป็นเงื่อนไขบังคับ</b><small>หากไม่ติ๊ก ระบบจะถือเป็นความต้องการลำดับสูงแต่ยอมผ่อนปรนได้</small></span></label>
               </div>
@@ -232,8 +232,8 @@
             <article class="card"><h3>ตรวจความพร้อมก่อนจัด</h3><div id="preflightBox"></div></article>
           </div>
           <article class="card generate-card">
-            <div><h3>ตัวจัดเวรออฟไลน์ชั่วคราว</h3><p>ใช้ทดสอบข้อมูลและหน้าจอได้ แต่ยังไม่ใช่ Exact Solver สำหรับประกาศเวรจริง</p></div>
-            <div class="generate-actions"><button class="btn primary xl" id="btnGenerate">จัดเวรแบบดีที่สุด</button></div>
+            <div><h3>Exact Solver + AI ตรวจสอบ</h3><p>CP-SAT จัดตารางทั้งเดือนตาม Hard constraints แล้ว Validator และ AI ตรวจซ้ำอัตโนมัติ</p></div>
+            <div class="generate-actions"><button class="btn primary xl" id="btnGenerate">Exact Solver จัดเวร + AI ตรวจ</button></div>
           </article>
           <div id="solverProgress" class="solver-progress" hidden><div class="spinner"></div><div><strong>กำลังจัดเวร…</strong><p id="solverProgressText">กำลังตรวจข้อจำกัด</p></div></div>
           <div id="generationReport"></div>
@@ -473,7 +473,7 @@ function bindEvents(){
   byId('btnAddHoliday').addEventListener('click',addHoliday);
   byId('btnFetchHolidays').addEventListener('click',fetchThaiHolidays);
   byId('btnAddStaffSpecial').addEventListener('click',addStaffSpecial);
-  byId('btnGenerate').addEventListener('click',generateSchedule);
+  byId('btnGenerate').addEventListener('click',generateScheduleExact);
   byId('btnAiAudit').addEventListener('click',runAiScheduleAudit);
   byId('personalSelect').addEventListener('change',renderPersonalSchedule);
   byId('btnExportCsv').addEventListener('click',exportCsv);
@@ -681,7 +681,7 @@ function demandForMode(){
 function renderGeneratePage(){
   const d=demandForMode(),ps=people();byId('demandSummary').innerHTML=`<div class="summary-cards"><div class="metric-card"><small>บุคลากร</small><strong>${ps.length}</strong></div><div class="metric-card"><small>ตำแหน่งเวรจริง</small><strong>${d.actual}</strong></div>${state.mode==='staff'?`<div class="metric-card"><small>On call</small><strong>${d.oncall}</strong></div>`:''}</div><p class="hint">${d.detail}</p>`;
   const checks=preflightChecks();byId('preflightBox').innerHTML=`<div class="check-list">${checks.map(c=>`<div class="check-row"><span class="check-icon ${c.ok?'ok':'warn'}">${c.ok?'✓':'!'}</span><span>${c.text}</span></div>`).join('')}</div>`;
-  const s=schedule();byId('btnGenerate').textContent=s?'↻ จัดใหม่ด้วยรูปแบบที่ดีที่สุด':'จัดเวรแบบดีที่สุด';byId('generationReport').innerHTML=s?`<div class="alert ${s.unfilled.length?'warning':'success'}" style="margin-top:18px"><strong>${s.unfilled.length?'จัดเวรได้บางส่วน':'จัดเวรสำเร็จ'}</strong><br>${s.unfilled.length?`ยังว่าง ${s.unfilled.length} ตำแหน่ง ระบบได้สร้างข้อเสนอแนะไว้แล้ว`:`ครบทุกตำแหน่ง คะแนนสมดุล ${Math.round(s.score)} • กดจัดใหม่เพื่อสุ่มตารางทางเลือก`}</div>`:'';
+  const s=schedule();byId('btnGenerate').textContent=s?'↻ Exact Solver สร้างตารางทางเลือก':'Exact Solver จัดเวร + AI ตรวจ';byId('generationReport').innerHTML=s?`<div class="alert ${s.unfilled.length?'warning':'success'}" style="margin-top:18px"><strong>${s.unfilled.length?'จัดเวรได้บางส่วน':'จัดเวรสำเร็จด้วย Exact Solver'}</strong><br>${s.unfilled.length?`ยังว่าง ${s.unfilled.length} ตำแหน่ง`:`ครบทุกตำแหน่ง • ${escapeHtml(s.solverMeta?.status||'FEASIBLE')} • ใช้เวลา ${Number(s.solverMeta?.wallTimeSeconds||0).toFixed(2)} วินาที • กดจัดใหม่เพื่อสร้างตารางทางเลือก`}</div>`:'';
 }
 function preflightChecks(){
   const ps=people(),d=demandForMode(),checks=[];checks.push({ok:ps.length>0,text:ps.length?`มีรายชื่อ ${ps.length} คน`:'ยังไม่มีรายชื่อ'});
@@ -768,6 +768,7 @@ function hardEligible(p,slot,stats,assignments,weekendBlocks){
   if(state.mode==='resident'){if(st.actual>=personCap(p))return false;if(st.half[halfOfDate(slot.date)]>=halfCap(p,halfOfDate(slot.date)))return false;}
   if(assignments.some(a=>a.personId===p.id&&a.start===slot.start&&a.shift!=='OC'))return false;
   const consecutiveHard=state.mode==='resident'?state.settings.noAdjacent:state.settings.staffConsecutivePolicy==='strict';if(consecutiveHard&&st.starts.some(x=>Math.abs(x-slot.start)===8))return false;
+  if(state.settings.avoid888&&hasFourShiftEightHourRestChainWithCandidate(st.starts,slot.start))return false;
   return true;
 }
 function candidateScore(p,slot,stats){
@@ -789,12 +790,11 @@ function candidateScore(p,slot,stats){
   score+=(st.actual/cap)*60+st.weight*2;const ns=normalizedShift(slot.shift);score+=(st.shifts[slot.shift]||0)*8;if(ns==='M')score+=((st.shifts.M||0)+(st.shifts.M1||0)+(st.shifts.M2||0))*5;
   if(isHoliday(slot.date))score+=st.holiday*13;if(avoidMatches(p,slot.date,slot.shift))score+=260;if(requestMatches(p,slot.date,slot.shift))score-=420;
   const adj=st.starts.filter(x=>Math.abs(x-slot.start)===8);if(adj.length){if(state.mode==='staff'){const prior=st.starts.find(x=>x===slot.start-8);const pair=prior!==undefined&&slot.shift==='N';score+=state.settings.staffConsecutivePolicy==='prefer'?(pair?28:100):18;}else score+=90;}
-  if(state.settings.avoid888&&has888WithCandidate(st.starts,slot.start))score+=150;
   if(st.dates[slot.date])score+=28*st.dates[slot.date];
   score+=outBkkPreferencePenalty(p,slot);
   return score;
 }
-function has888WithCandidate(starts,start){const all=new Set([...starts,start]);for(const s of all)if(all.has(s+16)&&all.has(s+32))return true;return false;}
+function hasFourShiftEightHourRestChainWithCandidate(starts,start){const all=new Set([...starts,start]);for(const s of all)if(all.has(s+16)&&all.has(s+32)&&all.has(s+48))return true;return false;}
 function assignToTrial(p,slot,stats,assignments){const a={...slot,personId:p.id,personName:p.name};assignments.push(a);const st=stats[p.id];st.total++;if(slot.shift==='OC'){st.oncall++;st.shifts.OC++;return;}st.actual++;st.weight+=slot.weight;st.half[halfOfDate(slot.date)]++;st.shifts[slot.shift]=(st.shifts[slot.shift]||0)+1;if(isHoliday(slot.date))st.holiday++;st.starts.push(slot.start);st.dates[slot.date]=(st.dates[slot.date]||0)+1;}
 function slotConstraintScore(slot,ps,weekendBlocks){const count=ps.filter(p=>staticEligible(p,slot,weekendBlocks)).length;let pri=count*10;if(slot.role==='Chief')pri-=70;if(isHoliday(slot.date))pri-=8;const req=ps.filter(p=>requestMatches(p,slot.date,slot.shift)).length;pri-=req*180;if(slot.shift==='OC')pri+=1000;return pri+slot.order/10000;}
 function solveOne(slots,ps,weekendBlocks){
@@ -822,7 +822,7 @@ function evaluateTrial(assignments,unfilled,stats,slots,weekendBlocks){
   for(const p of people()){
     const st=stats[p.id];if(state.mode==='resident'){
       const counts=[st.shifts.M||0,st.shifts.E||0,st.shifts.N||0],mean=counts.reduce((a,b)=>a+b,0)/3;score+=counts.reduce((a,x)=>a+(x-mean)**2,0)*8;
-      if(hasAny888(st.starts)){score+=250;issues.push(issue('medium',`${p.name} มีรูปแบบพัก 8 ชั่วโมงซ้ำต่อเนื่อง`,`ลองย้ายหนึ่งในเวรที่ห่างกัน 16 ชั่วโมงให้ผู้อื่น`));}
+      if(state.settings.avoid888&&hasFourShiftEightHourRestChain(st.starts)){score+=10000;issues.push(issue('high',`${p.name} มีลำดับเวรพัก 8 ชั่วโมงต่อเนื่องเกิน 3 เวร`,`ต้องย้ายอย่างน้อยหนึ่งเวรออกจากลำดับนี้ก่อนใช้ตาราง`));}
     }
     if(state.mode==='staff'){
       const minimum=staffMinTotal(p),deficit=Math.max(0,minimum-st.total);
@@ -838,7 +838,7 @@ function evaluateTrial(assignments,unfilled,stats,slots,weekendBlocks){
   for(const s of unfilled)issues.push(unfilledSuggestion(s,stats,assignments,weekendBlocks));
   return {score,issues:dedupeIssues(issues)};
 }
-function hasAny888(starts){const s=new Set(starts);for(const x of s)if(s.has(x+16)&&s.has(x+32))return true;return false;}
+function hasFourShiftEightHourRestChain(starts){const s=new Set(starts);for(const x of s)if(s.has(x+16)&&s.has(x+32)&&s.has(x+48))return true;return false;}
 function issue(severity,title,suggestion){return {severity,title,suggestion};}
 function dedupeIssues(list){const m=new Map();for(const x of list)m.set(`${x.title}|${x.suggestion}`,x);return [...m.values()];}
 function unfilledSuggestion(s,stats,assignments,weekendBlocks){
@@ -871,6 +871,64 @@ async function generateSchedule(){
   const wbObj={};for(const [id,v] of weekendBlocks)wbObj[id]=v.weekends;
   state.schedules[state.mode]={mode:state.mode,year:state.year,month:state.month,createdAt:new Date().toISOString(),slots,assignments:chosen.assignments,unfilled:chosen.unfilled,stats:chosen.stats,issues:chosen.issues,score:chosen.score,weekendBlocks:wbObj};
   saveState(false);byId('solverProgress').hidden=true;byId('btnGenerate').disabled=false;renderGeneratePage();renderResults();showPage('results');toast(chosen.unfilled.length?`จัดได้บางส่วน ยังว่าง ${chosen.unfilled.length} ตำแหน่ง`:(previousSignature&&scheduleSignature(chosen)!==previousSignature?'จัดตารางใหม่ให้แล้ว':'จัดเวรครบแล้ว'));
+}
+
+
+function buildExactSolverPayload(){
+  const weekendBlocks=buildWeekendBlocks(),blocked={};
+  for(const [id,value] of weekendBlocks)blocked[id]=[...value.set];
+  return {
+    mode:state.mode,
+    year:state.year,
+    month:state.month,
+    settings:deepClone(state.settings),
+    people:deepClone(people()).map(p=>({...p,computedMinTotal:state.mode==='staff'?staffMinTotal(p):null})),
+    holidays:deepClone(state.holidays||[]),
+    staffSpecials:deepClone(state.staffSpecials||[]),
+    slots:deepClone(buildSlots()),
+    weekendBlocks:blocked,
+    randomSeed:Math.floor(Math.random()*2147483646)+1,
+    maxTimeSeconds:45
+  };
+}
+
+function exactSolverReasonHtml(reasons=[]){
+  if(!reasons.length)return '<p class="hint">Exact Solver ไม่พบคำตอบ กรุณาตรวจ OFF, Chief, เพดาน และกฎพัก</p>';
+  return `<div class="issue-list">${reasons.slice(0,12).map(item=>`<div class="issue-card high"><strong>${escapeHtml(item.code||'INFEASIBLE')}</strong><p>${escapeHtml(item.message||'')}</p></div>`).join('')}</div>`;
+}
+
+async function generateScheduleExact(){
+  if(!people().length){toast('กรุณาเพิ่มรายชื่อก่อน');return;}
+  const button=byId('btnGenerate'),progress=byId('solverProgress'),progressText=byId('solverProgressText'),report=byId('generationReport');
+  button.disabled=true;progress.hidden=false;report.innerHTML='';
+  progressText.textContent='กำลังส่งเงื่อนไขทั้งหมดให้ Google OR-Tools CP-SAT…';
+  try{
+    const planner=buildExactSolverPayload();
+    const response=await fetch('/api/solve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({planner})});
+    const data=await response.json();
+    if(!response.ok||!data.ok){
+      const result=data.result||{};
+      report.innerHTML=`<div class="alert danger" style="margin-top:18px"><strong>Exact Solver ยังจัดไม่ได้</strong><br>${escapeHtml(result.message||data.message||'ไม่พบคำตอบ')}</div>${exactSolverReasonHtml(result.reasons||[])}`;
+      toast('Exact Solver ยังไม่พบตารางที่ผ่าน Hard constraints');
+      return;
+    }
+    const result=data.result,weekendBlocks=buildWeekendBlocks(),weekendObject={};
+    for(const [id,value] of weekendBlocks)weekendObject[id]=value.weekends;
+    const newSchedule={
+      mode:state.mode,year:state.year,month:state.month,createdAt:new Date().toISOString(),
+      slots:planner.slots,assignments:result.assignments,unfilled:[],stats:{},issues:[],score:Number(result.objective||0),
+      weekendBlocks:weekendObject,
+      solverMeta:{solver:data.solver,status:result.status,objective:result.objective,bestObjectiveBound:result.bestObjectiveBound,wallTimeSeconds:result.wallTimeSeconds,branches:result.branches,conflicts:result.conflicts,randomSeed:result.randomSeed}
+    };
+    recomputeSchedule(newSchedule);
+    newSchedule.solverMeta={solver:data.solver,status:result.status,objective:result.objective,bestObjectiveBound:result.bestObjectiveBound,wallTimeSeconds:result.wallTimeSeconds,branches:result.branches,conflicts:result.conflicts,randomSeed:result.randomSeed};
+    state.schedules[state.mode]=newSchedule;
+    saveState(false);renderGeneratePage();renderResults();showPage('results');
+    toast(`Exact Solver จัดครบ ${result.assignmentCount}/${result.slotCount} ตำแหน่ง`);
+    setTimeout(()=>runAiScheduleAudit(),250);
+  }catch(error){
+    report.innerHTML=`<div class="alert danger" style="margin-top:18px"><strong>เชื่อม Exact Solver ไม่สำเร็จ</strong><br>${escapeHtml(error.message||'เกิดข้อผิดพลาด')}</div>`;
+  }finally{progress.hidden=true;button.disabled=false;}
 }
 
 

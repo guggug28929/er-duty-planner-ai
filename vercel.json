@@ -3,6 +3,9 @@
   "functions": {
     "api/solver-test.py": {
       "maxDuration": 60
+    },
+    "api/solve.py": {
+      "maxDuration": 120
     }
   }
 }
