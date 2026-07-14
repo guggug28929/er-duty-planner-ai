@@ -110,6 +110,182 @@
 .personal-cal-empty{color:#a6b2b6;font-size:11px;margin-top:auto}
 @media(max-width:760px){.personal-month-calendar{gap:4px}.personal-cal-day{height:96px;padding:5px}.personal-shift-badge{font-size:9px;padding:2px 5px}}
 
+
+.creator-byline{
+  display:inline-flex;
+  align-items:center;
+  margin-left:7px;
+  padding:2px 7px;
+  border-radius:999px;
+  background:#e7f4f2;
+  color:#0f766e;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+.app-footer{
+  padding:18px 24px 24px;
+  text-align:center;
+  color:#60757c;
+  font-size:12px;
+  background:#fbfdfd;
+  border-top:1px solid var(--line);
+}
+.app-footer strong{color:#24434b}
+.staff-morning-calendar{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:7px;
+  margin-top:14px;
+}
+.staff-morning-head{
+  min-width:0;
+  padding:4px;
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:900;
+}
+.staff-morning-day{
+  position:relative;
+  height:88px;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #dbe5e7;
+  border-radius:12px;
+  background:#fff;
+  padding:8px;
+  color:var(--ink);
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+  transition:.16s;
+}
+.staff-morning-day:hover:not(:disabled){
+  transform:translateY(-1px);
+  border-color:#69aaa4;
+  box-shadow:0 8px 18px rgba(15,118,110,.10);
+}
+.staff-morning-day.blank{
+  border-color:transparent;
+  background:transparent;
+  cursor:default;
+}
+.staff-morning-day:disabled{
+  cursor:not-allowed;
+  color:#91a1a6;
+  background:#f3f6f7;
+}
+.staff-morning-day.two{
+  background:#e8f1ff;
+  border-color:#8bb6f5;
+  box-shadow:inset 0 0 0 1px #c7dcfb;
+}
+.staff-morning-day.activity{
+  background:#f4efff;
+  border-color:#bca9ee;
+}
+.staff-morning-day b{
+  display:block;
+  font-size:14px;
+  margin-bottom:10px;
+}
+.staff-morning-day span{
+  display:inline-flex;
+  padding:4px 7px;
+  border-radius:999px;
+  background:#eef3f4;
+  font-size:10px;
+  font-weight:900;
+}
+.staff-morning-day.two span{background:#d6e7ff;color:#1e4f9b}
+.staff-morning-day.activity span{background:#e5dcff;color:#6d28d9}
+.staff-morning-day small{
+  display:block;
+  margin-top:7px;
+  font-size:9px;
+  line-height:1.25;
+  color:#778b91;
+}
+.staff-morning-day.activity:after{
+  content:"Activity";
+  position:absolute;
+  right:6px;
+  top:6px;
+  padding:2px 5px;
+  border-radius:999px;
+  background:#6d28d9;
+  color:#fff;
+  font-size:8px;
+  font-weight:900;
+}
+.staff-morning-legend{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:12px;
+  color:var(--muted);
+  font-size:11px;
+}
+.staff-morning-legend span{display:inline-flex;align-items:center;gap:6px}
+.staff-morning-legend i{
+  width:12px;height:12px;border-radius:4px;border:1px solid #d2dfe2;
+}
+.staff-morning-legend .one{background:#fff}
+.staff-morning-legend .two{background:#d6e7ff;border-color:#8bb6f5}
+.staff-morning-legend .disabled{background:#f3f6f7}
+.disclaimer-card{
+  margin-top:18px;
+  border-color:#e9d7a8;
+  background:linear-gradient(135deg,#fffdf6,#fff);
+}
+.disclaimer-card h3{margin-bottom:8px}
+.disclaimer-text{
+  margin:0;
+  color:#5f5a49;
+  font-size:12px;
+  line-height:1.65;
+}
+.disclaimer-accept{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin-top:14px;
+  padding:12px;
+  border:1px solid #eadab1;
+  border-radius:12px;
+  background:#fffaf0;
+  cursor:pointer;
+}
+.disclaimer-accept input{
+  width:20px;
+  height:20px;
+  margin-top:1px;
+  flex:0 0 auto;
+}
+.disclaimer-accept span{
+  display:grid;
+  gap:3px;
+  font-size:12px;
+}
+.disclaimer-accept small{
+  color:#786f58;
+  font-weight:500;
+  line-height:1.45;
+}
+.disclaimer-gate{
+  margin-top:9px;
+  color:#9a5b00;
+  font-size:11px;
+  font-weight:800;
+}
+.disclaimer-gate.accepted{color:#16763a}
+@media(max-width:760px){
+  .creator-byline{display:flex;margin:4px 0 0;width:max-content}
+  .staff-morning-calendar{gap:4px}
+  .staff-morning-day{height:80px;padding:6px}
+}
+
 </style>
 </head>
 <body>
@@ -119,7 +295,7 @@
         <div class="brand-mark">ER</div>
         <div>
           <h1>ER Duty Planner</h1>
-          <p>โปรแกรมจัดเวร Resident และ Staff</p>
+          <p>โปรแกรมจัดเวร Resident และ Staff <span class="creator-byline">Created by Dr.Gug</span></p>
         </div>
       </div>
       <div class="top-actions">
@@ -197,6 +373,26 @@
                 <label class="span-2">นโยบายเวรติดกัน<select id="staffConsecutivePolicy"><option value="strict">ห้ามติดกันทุกกรณี</option><option value="prefer">อนุโลมเมื่อจำเป็น โดย prefer บ่าย–ดึก</option><option value="allow">อนุโลมได้ แต่ยังพยายามหลีกเลี่ยง</option></select></label>
               </div>
               <p class="hint">วันธรรมดาเลือกเวรเช้าได้ 1–2 คน และแก้จำนวนเป็นรายวันได้ในหน้า “วันหยุดและกิจกรรม” • จำนวนคนวันหยุดสามารถแยกจากวันธรรมดาได้ในตัวเลือกด้านล่าง</p>
+            </article>
+
+            <article class="card span-2" id="staffMorningDatesCard" hidden>
+              <div class="card-title-row">
+                <div>
+                  <h3>เลือกวันที่เวรเช้าวันธรรมดามี Staff 2 คน</h3>
+                  <p class="hint">จิ้มวันที่เพื่อสลับระหว่าง 1 และ 2 คน • วันหยุดใช้กติกาวันหยุด • วันที่มี Activity จะคงเป็น 2 คน</p>
+                </div>
+                <div class="button-row">
+                  <button type="button" class="btn ghost" id="btnStaffMorningAllOne">ทุกวันทำการ 1 คน</button>
+                  <button type="button" class="btn secondary" id="btnStaffMorningAllTwo">ทุกวันทำการ 2 คน</button>
+                  <button type="button" class="btn ghost" id="btnStaffMorningClear">ล้างค่ารายวัน</button>
+                </div>
+              </div>
+              <div id="staffMorningSetupCalendar" class="staff-morning-calendar"></div>
+              <div class="staff-morning-legend">
+                <span><i class="one"></i>1 คน</span>
+                <span><i class="two"></i>2 คน</span>
+                <span><i class="disabled"></i>เสาร์–อาทิตย์/วันหยุด</span>
+              </div>
             </article>
 
             <article class="card">
@@ -327,6 +523,21 @@
             <article class="card"><h3>ภาพรวมความต้องการกำลังคน</h3><div id="demandSummary"></div></article>
             <article class="card"><h3>ตรวจความพร้อมก่อนจัด</h3><div id="preflightBox"></div></article>
           </div>
+          <article class="card disclaimer-card">
+            <h3>ข้อจำกัดและการตรวจสอบก่อนใช้งาน</h3>
+            <p class="disclaimer-text">
+              โปรแกรมนี้เป็นเพียงเครื่องมือช่วยจัดเวร ไม่ใช่การอนุมัติตารางเวร ผู้รับผิดชอบต้องตรวจสอบข้อบังคับของโรงพยาบาล ชั่วโมงทำงานและเวลาพัก ความพร้อมของบุคลากร วันหยุด ตลอดจนผลจาก Validator ก่อนประกาศใช้ ผู้พัฒนาไม่รับผิดชอบต่อความเสียหายจากการนำผลลัพธ์ไปใช้โดยไม่ตรวจสอบ กรุณาใส่ข้อมูลส่วนบุคคลเท่าที่จำเป็น และเมื่อใช้ AI ระบบจะส่งข้อมูลตารางที่จำเป็นผ่าน Backend ไปยังบริการ AI ที่ตั้งค่าไว้
+            </p>
+            <label class="disclaimer-accept">
+              <input id="disclaimerAccepted" type="checkbox">
+              <span>
+                <b>ฉันรับทราบ และจะตรวจสอบตารางด้วยตนเองก่อนนำไปใช้จริง</b>
+                <small>ต้องยืนยันก่อนกด Exact Solver จัดตารางหรือสร้างตารางใหม่</small>
+              </span>
+            </label>
+            <div id="disclaimerGate" class="disclaimer-gate">กรุณาติ๊กยืนยันก่อนจัดเวร</div>
+          </article>
+
           <article class="card generate-card">
             <div><h3>Exact Solver + AI ตรวจสอบ</h3><p>CP-SAT จัดตารางทั้งเดือนตาม Hard constraints แล้ว Validator และ AI ตรวจซ้ำอัตโนมัติ</p></div>
             <div class="generate-actions"><button class="btn primary xl" id="btnGenerate">Exact Solver จัดเวร + AI ตรวจ</button></div>
@@ -355,6 +566,7 @@
         </section>
       </main>
     </div>
+    <footer class="app-footer">Created by <strong>Nuengburut Tiamtanom, M.D.</strong></footer>
   </div>
 
   <dialog id="personDialog" class="dialog">
@@ -496,7 +708,7 @@ function defaultPeople(mode){
 function defaultState(){
   const now=new Date();
   return {
-    version:6, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
+    version:7, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
     settings:{
       residentCaps:{R1:24,R2:23,R3:22,outBkk:7},
       residentReq:{M:{min:1,target:2,max:2,chief:true},E:{min:1,target:2,max:2,chief:true},N:{min:1,target:2,max:2,chief:true}},
@@ -504,7 +716,7 @@ function defaultState(){
       holidayStaffingDifferent:false,
       staffHolidayReq:{M:1,E:1,N:1},
       noAdjacent:true,avoid888:true,r1WedOff:true,strictRequests:false,
-      staffMorningBase:1,staffOnCallCount:1,staffConsecutivePolicy:'prefer',
+      staffMorningBase:1,staffOnCallCount:1,staffConsecutivePolicy:'prefer',disclaimerAccepted:false,
       solverRelaxations:{allowRequestedOffBreak:false,allowLong888:false,weekdayMorningReducedDates:[]}
     },
     people:{resident:defaultPeople('resident'),staff:defaultPeople('staff')},
@@ -547,7 +759,7 @@ function migrateState(s){
   const d=defaultState();
   const oldVersion=Number(s.version||1);
   const migrated={
-    ...d,...s,version:6,
+    ...d,...s,version:7,
     settings:{
       ...d.settings,...(s.settings||{}),
       residentCaps:{...d.settings.residentCaps,...(s.settings?.residentCaps||{})},
@@ -785,6 +997,15 @@ function bindEvents(){
   byId('btnAddHoliday').addEventListener('click',addHoliday);
   byId('btnFetchHolidays').addEventListener('click',fetchThaiHolidays);
   byId('btnAddStaffSpecial').addEventListener('click',addStaffSpecial);
+  byId('staffMorningSetupCalendar').addEventListener('click',handleStaffMorningSetupClick);
+  byId('btnStaffMorningAllOne').addEventListener('click',()=>bulkSetStaffMorningCount(1));
+  byId('btnStaffMorningAllTwo').addEventListener('click',()=>bulkSetStaffMorningCount(2));
+  byId('btnStaffMorningClear').addEventListener('click',clearStaffMorningOverrides);
+  byId('disclaimerAccepted').addEventListener('change',e=>{
+    state.settings.disclaimerAccepted=!!e.target.checked;
+    saveState(false);
+    renderGeneratePage();
+  });
   byId('btnGenerate').addEventListener('click',generateScheduleExact);
   byId('btnRefreshSchedule').addEventListener('click',generateScheduleExact);
   byId('btnAiAudit').addEventListener('click',runAiScheduleAudit);
@@ -808,7 +1029,7 @@ function syncControlsFromState(){
   byId('holidayStaffingDifferent').checked=!!state.settings.holidayStaffingDifferent;
   byId('staffHolMCount').value=state.settings.staffHolidayReq.M;byId('staffHolECount').value=state.settings.staffHolidayReq.E;byId('staffHolNCount').value=state.settings.staffHolidayReq.N;
   byId('noAdjacent').checked=state.settings.noAdjacent; byId('avoid888').checked=state.settings.avoid888; byId('r1WedOff').checked=state.settings.r1WedOff; byId('strictRequests').checked=state.settings.strictRequests;
-  byId('staffMorningBase').value=state.settings.staffMorningBase; byId('staffOnCallCount').value=state.settings.staffOnCallCount; byId('staffConsecutivePolicy').value=state.settings.staffConsecutivePolicy;
+  byId('staffMorningBase').value=state.settings.staffMorningBase; byId('staffOnCallCount').value=state.settings.staffOnCallCount; byId('staffConsecutivePolicy').value=state.settings.staffConsecutivePolicy; byId('disclaimerAccepted').checked=!!state.settings.disclaimerAccepted;
 }
 function readSettingsFromControls(){
   state.settings.residentCaps={R1:+byId('capR1').value,R2:+byId('capR2').value,R3:+byId('capR3').value,outBkk:+byId('capOutBkk').value};
@@ -831,7 +1052,7 @@ function showPage(page){ currentPage=page;document.querySelectorAll('.page').for
 function showResult(result){ currentResult=result;document.querySelectorAll('.result-tab').forEach(b=>b.classList.toggle('active',b.dataset.result===result));document.querySelectorAll('.result-panel').forEach(p=>p.classList.toggle('active',p.id===`result-${result}`));if(result==='personal')renderPersonalSchedule();saveViewState(); }
 function syncModeVisibility(){
   const staff=state.mode==='staff';
-  byId('residentCapsCard').hidden=staff;byId('residentReqCard').hidden=staff;byId('staffRuleCard').hidden=!staff;
+  byId('residentCapsCard').hidden=staff;byId('residentReqCard').hidden=staff;byId('staffRuleCard').hidden=!staff;byId('staffMorningDatesCard').hidden=!staff;
   byId('residentHolidayReqCard').hidden=staff||!state.settings.holidayStaffingDifferent;
   byId('staffHolidayReqCard').hidden=!staff||!state.settings.holidayStaffingDifferent;
   byId('r1WedWrap').hidden=staff;byId('staffSpecialCard').hidden=!staff;byId('staff2Legend').hidden=!staff;byId('activityLegend').hidden=!staff;byId('levelWrap').hidden=staff;byId('chiefWrap').hidden=staff;byId('rotationWrap').hidden=staff;byId('dialogOnCallWrap').hidden=!staff;byId('onCallMaxWrap').hidden=!staff;byId('minTotalDutyWrap').hidden=!staff;byId('dialogMinTotalWrap').hidden=!staff;
@@ -849,10 +1070,91 @@ function ensureDatesInMonth(){
   state.staffSpecials=state.staffSpecials.filter(x=>x.date.startsWith(prefix));
   state.settings.solverRelaxations.weekdayMorningReducedDates=(state.settings.solverRelaxations.weekdayMorningReducedDates||[]).filter(x=>x.startsWith(prefix));
 }
-function renderAll(){ syncModeVisibility();renderMonthPreview();renderPeople();renderConditionUI();renderHolidays();renderGeneratePage();if(currentPage==='results')renderResults(); }
+function renderAll(){ syncModeVisibility();renderMonthPreview();renderStaffMorningSetupCalendar();renderPeople();renderConditionUI();renderHolidays();renderGeneratePage();if(currentPage==='results')renderResults(); }
 function renderMonthPreview(){
   const dates=monthDates(), weekends=dates.filter(isWeekend).length, holidays=dates.filter(d=>holidayMap().has(d)).length;
   byId('monthPreview').innerHTML=`<b>${MONTHS_TH[state.month]} ${state.year+543}</b> มี ${dates.length} วัน • วันทำการราชการ ${governmentWorkdayCount()} วัน • เสาร์–อาทิตย์ ${weekends} วัน • วันหยุดที่เพิ่มไว้ ${holidays} วัน • แบ่งครึ่งเดือน ${1}–${halfBoundary()} และ ${halfBoundary()+1}–${dates.length}`;
+}
+
+
+function upsertStaffMorningSpecial(date,count){
+  const prefix=`${state.year}-${pad(state.month+1)}-`;
+  if(!date?.startsWith(prefix)||!isWeekday(date)||holidayMap().has(date))return false;
+  let item=state.staffSpecials.find(x=>x.date===date);
+  if(item?.activity&&count<2){
+    toast('วันที่มี Activity ต้องใช้ Staff 2 คน');
+    return false;
+  }
+  if(count===Number(state.settings.staffMorningBase)&&!item?.activity){
+    state.staffSpecials=state.staffSpecials.filter(x=>x.date!==date);
+    return true;
+  }
+  if(item)item.count=count;
+  else state.staffSpecials.push({id:uid('ss'),date,count,activity:false});
+  return true;
+}
+function renderStaffMorningSetupCalendar(){
+  const container=byId('staffMorningSetupCalendar');
+  if(!container)return;
+  const heads=['อา','จ','อ','พ','พฤ','ศ','ส'].map(day=>`<div class="staff-morning-head">${day}</div>`).join('');
+  const first=new Date(state.year,state.month,1).getDay();
+  let cells=Array(first).fill('<button type="button" class="staff-morning-day blank" disabled></button>').join('');
+  const hm=holidayMap();
+  for(const date of monthDates()){
+    const day=parseISO(date).getDate();
+    const special=state.staffSpecials.find(x=>x.date===date);
+    const disabled=isWeekend(date)||hm.has(date);
+    const count=disabled
+      ? (state.settings.holidayStaffingDifferent?Number(state.settings.staffHolidayReq.M||0):1)
+      : staffMorningCount(date);
+    const classes=['staff-morning-day'];
+    if(count===2)classes.push('two');
+    if(special?.activity)classes.push('activity');
+    const note=disabled?(hm.get(date)||'เสาร์–อาทิตย์'):(special?.activity?'Staff 2 ถึง 10:00 น.':'จิ้มเพื่อสลับ');
+    cells+=`<button type="button" class="${classes.join(' ')}" data-staff-morning-date="${date}" ${disabled?'disabled':''}>
+      <b>${day}</b>
+      <span>${count} คน</span>
+      <small>${escapeHtml(note)}</small>
+    </button>`;
+  }
+  container.innerHTML=heads+cells;
+}
+function handleStaffMorningSetupClick(event){
+  const button=event.target.closest('[data-staff-morning-date]');
+  if(!button||button.disabled)return;
+  const date=button.dataset.staffMorningDate;
+  const next=staffMorningCount(date)===2?1:2;
+  if(!upsertStaffMorningSpecial(date,next))return;
+  invalidateSchedule();
+  saveState(false);
+  renderAll();
+  toast(`${fmtDate(date)} เวรเช้า ${next} คน`);
+}
+function bulkSetStaffMorningCount(count){
+  for(const date of monthDates()){
+    if(!isWeekday(date)||holidayMap().has(date))continue;
+    const special=state.staffSpecials.find(x=>x.date===date);
+    upsertStaffMorningSpecial(date,special?.activity?2:count);
+  }
+  invalidateSchedule();
+  saveState(false);
+  renderAll();
+  toast(`ตั้งเวรเช้าวันทำการเป็น ${count} คนแล้ว`);
+}
+function clearStaffMorningOverrides(){
+  const prefix=`${state.year}-${pad(state.month+1)}-`;
+  state.staffSpecials=state.staffSpecials.filter(item=>{
+    if(!item.date.startsWith(prefix))return true;
+    if(item.activity){
+      item.count=2;
+      return true;
+    }
+    return false;
+  });
+  invalidateSchedule();
+  saveState(false);
+  renderAll();
+  toast('ล้างค่าเฉพาะวันแล้ว ใช้ค่าเริ่มต้นเวรเช้า');
 }
 
 function renderPeople(){
@@ -1037,7 +1339,13 @@ function demandForMode(){
 function renderGeneratePage(){
   const d=demandForMode(),ps=people();byId('demandSummary').innerHTML=`<div class="summary-cards"><div class="metric-card"><small>บุคลากร</small><strong>${ps.length}</strong></div><div class="metric-card"><small>ตำแหน่งเวรจริง</small><strong>${d.actual}</strong></div>${state.mode==='staff'?`<div class="metric-card"><small>On call</small><strong>${d.oncall}</strong></div>`:''}</div><p class="hint">${d.detail}</p>`;
   const checks=preflightChecks();byId('preflightBox').innerHTML=`<div class="check-list">${checks.map(c=>`<div class="check-row"><span class="check-icon ${c.ok?'ok':'warn'}">${c.ok?'✓':'!'}</span><span>${c.text}</span></div>`).join('')}</div>`;
-  const s=schedule(),active=relaxationSummary();byId('btnGenerate').textContent=s?'↻ Exact Solver สร้างตารางทางเลือก':'Exact Solver จัดเวร + AI ตรวจ';byId('generationReport').innerHTML=s?`<div class="alert ${s.unfilled.length?'warning':'success'}" style="margin-top:18px"><strong>${s.unfilled.length?'จัดเวรได้บางส่วน':'จัดเวรสำเร็จด้วย Exact Solver'}</strong><br>${s.unfilled.length?`ยังว่าง ${s.unfilled.length} ตำแหน่ง`:`ครบทุกตำแหน่ง • ${escapeHtml(s.solverMeta?.status||'FEASIBLE')} • ใช้เวลา ${Number(s.solverMeta?.wallTimeSeconds||0).toFixed(2)} วินาที • กดจัดใหม่เพื่อสร้างตารางทางเลือก`}</div>${active.length?`<div class="relaxation-strip"><b>ตารางนี้ใช้ทางผ่อน:</b> ${escapeHtml(active.join(' • '))}</div>`:''}`:'';
+  const accepted=!!state.settings.disclaimerAccepted;
+  byId('disclaimerAccepted').checked=accepted;
+  byId('disclaimerGate').className=`disclaimer-gate${accepted?' accepted':''}`;
+  byId('disclaimerGate').textContent=accepted?'รับทราบแล้ว — สามารถจัดเวรได้':'กรุณาติ๊กยืนยันก่อนจัดเวร';
+  const refreshButton=byId('btnRefreshSchedule');
+  if(refreshButton)refreshButton.disabled=!accepted;
+  const s=schedule(),active=relaxationSummary();byId('btnGenerate').disabled=!accepted;byId('btnGenerate').textContent=s?'↻ Exact Solver สร้างตารางทางเลือก':'Exact Solver จัดเวร + AI ตรวจ';byId('generationReport').innerHTML=s?`<div class="alert ${s.unfilled.length?'warning':'success'}" style="margin-top:18px"><strong>${s.unfilled.length?'จัดเวรได้บางส่วน':'จัดเวรสำเร็จด้วย Exact Solver'}</strong><br>${s.unfilled.length?`ยังว่าง ${s.unfilled.length} ตำแหน่ง`:`ครบทุกตำแหน่ง • ${escapeHtml(s.solverMeta?.status||'FEASIBLE')} • ใช้เวลา ${Number(s.solverMeta?.wallTimeSeconds||0).toFixed(2)} วินาที • กดจัดใหม่เพื่อสร้างตารางทางเลือก`}</div>${active.length?`<div class="relaxation-strip"><b>ตารางนี้ใช้ทางผ่อน:</b> ${escapeHtml(active.join(' • '))}</div>`:''}`:'';
 }
 function preflightChecks(){
   const ps=people(),d=demandForMode(),checks=[];checks.push({ok:ps.length>0,text:ps.length?`มีรายชื่อ ${ps.length} คน`:'ยังไม่มีรายชื่อ'});
@@ -1277,6 +1585,12 @@ function exactSolverReasonHtml(reasons=[]){
 }
 
 async function generateScheduleExact(){
+  if(!state.settings.disclaimerAccepted){
+    toast('กรุณารับทราบข้อจำกัดการใช้งานก่อนจัดเวร');
+    showPage('generate');
+    byId('disclaimerAccepted')?.focus();
+    return;
+  }
   if(!people().length){toast('กรุณาเพิ่มรายชื่อก่อน');return;}
   const button=byId('btnGenerate'),refreshButton=byId('btnRefreshSchedule'),progress=byId('solverProgress'),progressText=byId('solverProgressText'),report=byId('generationReport');
   button.disabled=true;if(refreshButton)refreshButton.disabled=true;progress.hidden=false;report.innerHTML='';toast('กำลังให้ Exact Solver จัดตารางใหม่…');
