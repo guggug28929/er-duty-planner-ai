@@ -9,7 +9,31 @@ function cleanPlainText(value) {
   return String(value || "")
     .replace(/\*\*/g, "")
     .replace(/^#+\s*/gm, "")
+    .replace(/^ACTION=.*$/gm, "")
     .trim();
+}
+
+const ALLOWED_ACTIONS = new Set([
+  "REFRESH_EXACT",
+  "ALLOW_REQUESTED_OFF",
+  "ALLOW_LONG_888",
+  "REDUCE_WEEKDAY_MORNING",
+  "NONE"
+]);
+
+function fallbackAction(audit) {
+  const codes = new Set((audit.hardViolations || []).map((item) => item.code));
+  if (codes.has("ADJACENT_SHIFTS")) return "REFRESH_EXACT";
+  if (codes.has("MORE_THAN_THREE_8_HOUR_REST_SHIFTS")) return "ALLOW_LONG_888";
+  if ([...codes].some((code) => code.includes("UNFILLED") || code.includes("MISSING_CHIEF"))) return "REDUCE_WEEKDAY_MORNING";
+  if (codes.has("REQUESTED_OFF_ASSIGNED")) return "ALLOW_REQUESTED_OFF";
+  return audit.status === "PASS" ? "NONE" : "ALLOW_REQUESTED_OFF";
+}
+
+function parseRecommendedAction(raw, audit) {
+  const match = String(raw || "").match(/ACTION=(REFRESH_EXACT|ALLOW_REQUESTED_OFF|ALLOW_LONG_888|REDUCE_WEEKDAY_MORNING|NONE)/);
+  const value = match?.[1];
+  return ALLOWED_ACTIONS.has(value) ? value : fallbackAction(audit);
 }
 
 export default async function handler(request, response) {
@@ -37,6 +61,7 @@ export default async function handler(request, response) {
       ok: true,
       audit,
       aiExplanation: "Validator ตรวจตารางแล้ว แต่ยังไม่พบ OPENAI_API_KEY จึงยังไม่มีคำอธิบายจาก AI",
+      aiRecommendedAction: fallbackAction(audit),
       timestamp: new Date().toISOString()
     });
   }
@@ -65,7 +90,7 @@ export default async function handler(request, response) {
         {
           role: "system",
           content:
-            "คุณเป็นผู้ช่วยตรวจตารางเวร ER อธิบายภาษาไทยแบบข้อความธรรมดา ห้ามใช้ Markdown ห้ามใช้เครื่องหมายดอกจัน ห้ามแต่งข้อผิดพลาดเพิ่ม ให้ยึดรายการจาก Validator เท่านั้น เริ่มด้วยสรุปว่าผ่าน Hard constraints หรือไม่ จากนั้นบอกปัญหาสำคัญและแนวทางแก้ที่ปลอดภัย 4-8 บรรทัด และย้ำว่า Validator เป็นผู้ตัดสินผลสุดท้าย"
+            "คุณเป็นผู้ช่วยตรวจตารางเวร ER อธิบายภาษาไทยแบบข้อความธรรมดา ห้ามใช้ Markdown ห้ามใช้เครื่องหมายดอกจัน ห้ามแต่งข้อผิดพลาดเพิ่ม ให้ยึดรายการจาก Validator เท่านั้น เริ่มด้วยสรุปว่าผ่าน Hard constraints หรือไม่ จากนั้นบอกปัญหาสำคัญและแนวทางแก้ที่ปลอดภัย 4-8 บรรทัด และย้ำว่า Validator เป็นผู้ตัดสินผลสุดท้าย บรรทัดสุดท้ายต้องเลือกทางแก้เพียงหนึ่งค่าในรูปแบบ ACTION=REFRESH_EXACT หรือ ACTION=ALLOW_REQUESTED_OFF หรือ ACTION=ALLOW_LONG_888 หรือ ACTION=REDUCE_WEEKDAY_MORNING หรือ ACTION=NONE"
         },
         {
           role: "user",
@@ -79,6 +104,7 @@ export default async function handler(request, response) {
       ok: true,
       audit,
       aiExplanation: cleanPlainText(aiResult.output_text),
+      aiRecommendedAction: parseRecommendedAction(aiResult.output_text, audit),
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -87,6 +113,7 @@ export default async function handler(request, response) {
       ok: true,
       audit,
       aiExplanation: "Validator ตรวจตารางเรียบร้อยแล้ว แต่ AI อธิบายผลไม่สำเร็จในครั้งนี้",
+      aiRecommendedAction: fallbackAction(audit),
       aiError: error?.message || "UNKNOWN_AI_ERROR",
       timestamp: new Date().toISOString()
     });

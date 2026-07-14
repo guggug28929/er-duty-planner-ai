@@ -95,6 +95,9 @@ def solve_schedule(payload):
     people = payload.get("people") or []
     slots = payload.get("slots") or []
     settings = payload.get("settings") or {}
+    relaxations = settings.get("solverRelaxations") or {}
+    allow_requested_off_break = bool(relaxations.get("allowRequestedOffBreak"))
+    allow_long_888 = bool(relaxations.get("allowLong888"))
     public_holidays = {item.get("date") for item in (payload.get("holidays") or [])}
     weekend_blocks = payload.get("weekendBlocks") or {}
     seed = int(payload.get("randomSeed") or 2569) % 2_147_483_647
@@ -121,10 +124,12 @@ def solve_schedule(payload):
     def static_eligible(person, slot):
         if slot.get("role") == "Chief" and not person.get("chiefEligible"):
             return False
-        if condition_contains(person, "off", slot["date"], slot["shift"]):
+        if condition_contains(person, "hardOff", slot["date"], slot["shift"]):
+            return False
+        if not allow_requested_off_break and condition_contains(person, "off", slot["date"], slot["shift"]):
             return False
         blocked = set(weekend_blocks.get(person["id"]) or [])
-        if f'{slot["date"]}|{slot["shift"]}' in blocked:
+        if not allow_requested_off_break and f'{slot["date"]}|{slot["shift"]}' in blocked:
             return False
         if mode == "resident":
             period = rotation_period(person, slot["date"], boundary)
@@ -243,7 +248,7 @@ def solve_schedule(payload):
     for pi, person in enumerate(people):
         for start in starts:
             next_start = start + 8
-            if next_start not in at_start or (pi, next_start) not in at_start:
+            if (pi, next_start) not in at_start:
                 continue
             first = at_start[(pi, start)]
             second = at_start[(pi, next_start)]
@@ -271,10 +276,17 @@ def solve_schedule(payload):
                 chain_starts = (start, start + 16, start + 32, start + 48)
                 if not all((pi, chain_start) in at_start for chain_start in chain_starts):
                     continue
-                model.add(
-                    sum(at_start[(pi, chain_start)] for chain_start in chain_starts)
-                    <= 3
-                )
+                chain_sum = sum(at_start[(pi, chain_start)] for chain_start in chain_starts)
+                if not allow_long_888:
+                    model.add(chain_sum <= 3)
+                else:
+                    chain_violation = model.new_bool_var(f"long888_{pi}_{start}")
+                    model.add(chain_violation <= at_start[(pi, start)])
+                    model.add(chain_violation <= at_start[(pi, start + 16)])
+                    model.add(chain_violation <= at_start[(pi, start + 32)])
+                    model.add(chain_violation <= at_start[(pi, start + 48)])
+                    model.add(chain_violation >= chain_sum - 3)
+                    objective_terms.append(chain_violation * 18000)
 
     # ขออยู่เวร: strict = hard, ไม่ strict = soft priority สูง
     strict_requests = bool(settings.get("strictRequests"))
@@ -320,7 +332,13 @@ def solve_schedule(payload):
         for si, slot in enumerate(slots):
             var = x[(pi, si)]
             if condition_contains(person, "avoid", slot["date"], slot["shift"]):
-                objective_terms.append(var * 12000)
+                objective_terms.append(var * 6500)
+
+            if allow_requested_off_break and condition_contains(person, "off", slot["date"], slot["shift"]):
+                objective_terms.append(var * 22000)
+
+            if allow_requested_off_break and f'{slot["date"]}|{slot["shift"]}' in set(weekend_blocks.get(person["id"]) or []):
+                objective_terms.append(var * 20000)
 
             if mode == "resident" and rotation_period(person, slot["date"], boundary) == "out_bkk":
                 if request_contains(person, slot["date"], slot["shift"]):
@@ -441,6 +459,11 @@ def solve_schedule(payload):
         "slotCount": len(slots),
         "assignmentCount": len(assignments),
         "randomSeed": seed,
+        "relaxations": {
+            "allowRequestedOffBreak": allow_requested_off_break,
+            "allowLong888": allow_long_888,
+            "weekdayMorningReducedDates": relaxations.get("weekdayMorningReducedDates") or [],
+        },
     }
 
 

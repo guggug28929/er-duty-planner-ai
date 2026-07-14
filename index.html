@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f766e" />
-  <title>ER Duty Planner v5</title>
+  <title>ER Duty Planner v8</title>
   <style>
 [hidden]{display:none!important}
 :root{--bg:#f4f7f8;--card:#fff;--ink:#15323b;--muted:#667b83;--line:#dce6e8;--primary:#0f766e;--primary-2:#0b5e58;--soft:#e8f5f3;--blue:#2563eb;--amber:#d97706;--red:#dc2626;--purple:#7c3aed;--shadow:0 12px 30px rgba(23,50,59,.08);--radius:18px}
@@ -56,6 +56,40 @@
 .saved-work-actions button{padding:8px 11px}
 .storage-warning{margin-top:10px;padding:10px 12px;border-radius:11px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.55}
 @media(max-width:980px){.autosave-status{order:10;width:100%;justify-content:center}.top-actions{flex-wrap:wrap}.saved-work-item{align-items:flex-start;flex-direction:column}.saved-work-actions{justify-content:flex-start}}
+
+
+/* Step 8: clearer condition priority, grouped audit and repair actions */
+.paint-toolbar{grid-template-columns:repeat(5,minmax(135px,1fr))}
+.paint-tool.hardoff .paint-swatch{background:#8b0000}
+.paint-tool.off .paint-swatch{background:#f87171}
+.paint-tool.avoid .paint-swatch{background:#f59e0b}
+.condition-cell.condition-hardOff{background:#991b1b;border-color:#7f1d1d;color:#fff}
+.condition-cell.condition-off{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
+.legend-swatch.hardoff{background:#8b0000}
+.legend-swatch.off{background:#f87171}
+.condition-item.type-hardOff{border-left:4px solid #8b0000}
+.condition-priority-note{margin:0;padding:10px 20px;background:#fff7ed;border-bottom:1px solid #fed7aa;color:#7c2d12;font-size:12px;line-height:1.6}
+.holiday-requirement-card .shift-rule-table{margin-top:10px}
+.ai-audit-summary-list{display:grid;gap:10px}
+.ai-audit-group{border:1px solid #e4ebed;border-radius:13px;padding:12px;background:#fff}
+.ai-audit-group.hard{border-left:5px solid #dc2626;background:#fffafa}
+.ai-audit-group.soft{border-left:5px solid #d97706;background:#fffdf7}
+.ai-audit-group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ai-audit-group h5{margin:0;font-size:14px}
+.ai-audit-group p{margin:5px 0 0;color:#536c74;font-size:12px;line-height:1.5}
+.ai-audit-count{display:inline-flex;min-width:30px;height:25px;align-items:center;justify-content:center;border-radius:999px;background:#eef3f4;font-weight:900;font-size:12px}
+.ai-audit-details{margin-top:8px}
+.ai-audit-details summary{cursor:pointer;font-size:12px;font-weight:800;color:#49636b}
+.ai-audit-details ul{margin:8px 0 0;padding-left:20px;color:#536c74;font-size:12px;line-height:1.55}
+.repair-panel{margin-top:16px;border:1px solid #cfe3e1;border-radius:15px;background:#f6fbfa;padding:15px}
+.repair-panel h4{margin:0 0 6px}
+.repair-panel p{margin:0 0 12px;color:#587078;font-size:12px;line-height:1.55}
+.repair-actions{display:flex;gap:8px;flex-wrap:wrap}
+.repair-action{border:1px solid #bfd8d5;background:#fff;color:#0f655f;border-radius:11px;padding:9px 12px;font:inherit;font-size:12px;font-weight:900;cursor:pointer}
+.repair-action:hover{background:#e8f5f3}
+.repair-action.recommended{background:#0f766e;color:#fff;border-color:#0f766e}
+.relaxation-strip{margin-top:12px;padding:10px 12px;border-radius:12px;background:#fff7ed;color:#8a4b08;font-size:12px;line-height:1.55}
+@media(max-width:1050px){.paint-toolbar{grid-template-columns:repeat(2,minmax(140px,1fr))}}
 
 </style>
 </head>
@@ -127,7 +161,7 @@
             </article>
 
             <article class="card" id="residentReqCard">
-              <div class="card-title-row"><h3>จำนวนคนต่อเวร Resident</h3><span class="badge">ปรับได้</span></div>
+              <div class="card-title-row"><h3>จำนวนคนต่อเวร Resident — วันธรรมดา</h3><span class="badge">ปรับได้</span></div>
               <div class="shift-rule-table">
                 <div class="rule-head"><span>เวร</span><span>ขั้นต่ำ</span><span>เป้าหมาย</span><span>สูงสุด</span><span>ต้องมี Chief</span></div>
                 <div class="rule-row"><strong>เช้า 08–16</strong><input id="resMMin" type="number" min="1"><input id="resMTarget" type="number" min="1"><input id="resMMax" type="number" min="1"><input id="resMChief" type="checkbox"></div>
@@ -143,7 +177,32 @@
                 <label>จำนวน On call ต่อคืน<input id="staffOnCallCount" type="number" min="0" max="3" /></label>
                 <label class="span-2">นโยบายเวรติดกัน<select id="staffConsecutivePolicy"><option value="strict">ห้ามติดกันทุกกรณี</option><option value="prefer">อนุโลมเมื่อจำเป็น โดย prefer บ่าย–ดึก</option><option value="allow">อนุโลมได้ แต่ยังพยายามหลีกเลี่ยง</option></select></label>
               </div>
-              <p class="hint">วันธรรมดาเลือกเวรเช้าได้ 1–2 คน และแก้จำนวนเป็นรายวันได้ในหน้า “วันหยุดและกิจกรรม” • วันหยุดใช้เช้า–บ่าย–ดึกอย่างละ 1 คน</p>
+              <p class="hint">วันธรรมดาเลือกเวรเช้าได้ 1–2 คน และแก้จำนวนเป็นรายวันได้ในหน้า “วันหยุดและกิจกรรม” • จำนวนคนวันหยุดสามารถแยกจากวันธรรมดาได้ในตัวเลือกด้านล่าง</p>
+            </article>
+
+            <article class="card">
+              <h3>จำนวนคนวันหยุดแตกต่างจากวันธรรมดาหรือไม่</h3>
+              <label class="toggle-row"><input id="holidayStaffingDifferent" type="checkbox"><span><b>กำหนดกำลังคนวันหยุดแยกต่างหาก</b><small>ครอบคลุมเสาร์–อาทิตย์ วันหยุดราชการ และวันหยุดพิเศษที่เพิ่มไว้</small></span></label>
+            </article>
+
+            <article class="card holiday-requirement-card" id="residentHolidayReqCard" hidden>
+              <div class="card-title-row"><h3>จำนวนคนต่อเวร Resident — วันหยุด</h3><span class="badge">แยกจากวันธรรมดา</span></div>
+              <div class="shift-rule-table">
+                <div class="rule-head"><span>เวร</span><span>ขั้นต่ำ</span><span>เป้าหมาย</span><span>สูงสุด</span><span>ต้องมี Chief</span></div>
+                <div class="rule-row"><strong>เช้า 08–16</strong><input id="resHolMMin" type="number" min="0"><input id="resHolMTarget" type="number" min="0"><input id="resHolMMax" type="number" min="0"><input id="resHolMChief" type="checkbox"></div>
+                <div class="rule-row"><strong>บ่าย 16–24</strong><input id="resHolEMin" type="number" min="0"><input id="resHolETarget" type="number" min="0"><input id="resHolEMax" type="number" min="0"><input id="resHolEChief" type="checkbox"></div>
+                <div class="rule-row"><strong>ดึก 24–08</strong><input id="resHolNMin" type="number" min="0"><input id="resHolNTarget" type="number" min="0"><input id="resHolNMax" type="number" min="0"><input id="resHolNChief" type="checkbox"></div>
+              </div>
+            </article>
+
+            <article class="card holiday-requirement-card" id="staffHolidayReqCard" hidden>
+              <div class="card-title-row"><h3>จำนวน Staff — วันหยุด</h3><span class="badge">แยกจากวันธรรมดา</span></div>
+              <div class="form-grid three">
+                <label>เวรเช้า<input id="staffHolMCount" type="number" min="0" max="2"></label>
+                <label>เวรบ่าย<input id="staffHolECount" type="number" min="0" max="2"></label>
+                <label>เวรดึก<input id="staffHolNCount" type="number" min="0" max="2"></label>
+              </div>
+              <p class="hint">On call ยังคงใช้จำนวนต่อคืนจากกติกา Staff ด้านบน</p>
             </article>
 
             <article class="card">
@@ -181,16 +240,19 @@
                   <span class="badge info" id="conditionMonthBadge"></span>
                 </div>
                 <div class="paint-toolbar" id="conditionPaintToolbar" role="toolbar" aria-label="เลือกชนิดเงื่อนไข">
-                  <button type="button" class="paint-tool off active" data-paint-mode="off"><span class="paint-swatch"></span><b>OFF บังคับ</b><small>ห้ามจัดเวรนี้</small></button>
-                  <button type="button" class="paint-tool avoid" data-paint-mode="avoid"><span class="paint-swatch"></span><b>ไม่ Prefer</b><small>เลี่ยงได้เลี่ยง</small></button>
+                  <button type="button" class="paint-tool hardoff active" data-paint-mode="hardOff"><span class="paint-swatch"></span><b>OFF บังคับ</b><small>ไปเรียน / สอบ / Vacation — ห้าม break</small></button>
+                  <button type="button" class="paint-tool off" data-paint-mode="off"><span class="paint-swatch"></span><b>ขอ Off</b><small>ให้ความสำคัญสูง แต่ผ่อนได้เมื่ออนุญาต</small></button>
+                  <button type="button" class="paint-tool avoid" data-paint-mode="avoid"><span class="paint-swatch"></span><b>เลี่ยง</b><small>เลี่ยงได้เลี่ยง</small></button>
                   <button type="button" class="paint-tool request" data-paint-mode="request"><span class="paint-swatch"></span><b>ขออยู่เวร</b><small>ให้ความสำคัญสูง</small></button>
                   <button type="button" class="paint-tool erase" data-paint-mode="erase"><span class="paint-swatch"></span><b>ยางลบ</b><small>ล้างเงื่อนไข</small></button>
                 </div>
+                <div class="condition-priority-note"><b>ลำดับความสำคัญ:</b> OFF บังคับ (ไปเรียน/สอบ/Vacation) &gt; ขอ Off &gt; เลี่ยง • OFF บังคับห้ามระบบฝืนเด็ดขาด</div>
                 <div class="paint-status" id="conditionPaintStatus">กำลังใช้: <b>OFF บังคับ</b></div>
                 <div class="condition-calendar-wrap" id="conditionCalendar"></div>
                 <div class="condition-legend">
-                  <span><i class="legend-swatch off"></i>OFF บังคับ</span>
-                  <span><i class="legend-swatch avoid"></i>ไม่ Prefer แต่จัดได้เมื่อจำเป็น</span>
+                  <span><i class="legend-swatch hardoff"></i>OFF บังคับ — ห้าม break</span>
+                  <span><i class="legend-swatch off"></i>ขอ Off — priority สูง</span>
+                  <span><i class="legend-swatch avoid"></i>เลี่ยง — priority ต่ำกว่า</span>
                   <span><i class="legend-swatch request"></i>ขออยู่เวร</span>
                   <span><i class="legend-swatch holiday"></i>วันหยุด/สุดสัปดาห์</span>
                 </div>
@@ -257,7 +319,7 @@
         <section class="page" id="page-results">
           <div class="page-heading">
             <div><span class="eyebrow">STEP 6</span><h2>ตารางเวรและสรุปผล</h2><p>ดูได้ทั้งรายวัน รายบุคคล และสรุปจำนวนเวร</p></div>
-            <div class="button-row"><button class="btn primary" id="btnAiAudit">AI ตรวจสอบตาราง</button><button class="btn ghost" id="btnPrint">พิมพ์ / บันทึก PDF</button><button class="btn secondary" id="btnExportExcel">ดาวน์โหลด Excel</button><button class="btn secondary" id="btnExportCsv">ดาวน์โหลด CSV</button></div>
+            <div class="button-row"><button class="btn primary" id="btnRefreshSchedule">↻ Refresh ตาราง</button><button class="btn secondary" id="btnAiAudit">AI ตรวจสอบตาราง</button><button class="btn ghost" id="btnPrint">พิมพ์ / บันทึก PDF</button><button class="btn secondary" id="btnExportExcel">ดาวน์โหลด Excel</button><button class="btn secondary" id="btnExportCsv">ดาวน์โหลด CSV</button></div>
           </div>
           <div class="result-tabs"><button class="result-tab active" data-result="daily">ตารางรายวัน</button><button class="result-tab" data-result="personal">รายบุคคล</button><button class="result-tab" data-result="summary">สรุปโควตา</button><button class="result-tab" data-result="issues">ข้อเสนอแนะ</button></div>
           <section id="aiAuditPanel" class="ai-audit-panel" hidden>
@@ -369,33 +431,62 @@ function escapeHtml(str=''){ return String(str).replace(/[&<>'"]/g, c=>({ '&':'&
 function downloadBlob(content, filename, type='text/plain;charset=utf-8'){ const blob=new Blob([content],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),500); }
 function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
 function randNoise(){ return Math.random()*2-1; }
-const PERSON_COLORS=['#2563eb','#dc2626','#059669','#7c3aed','#ea580c','#0891b2','#be123c','#4f46e5','#65a30d','#c026d3','#0f766e','#b45309','#0369a1','#9333ea','#15803d','#e11d48','#475569','#ca8a04'];
+const PERSON_COLORS=['#2563EB','#DC2626','#16A34A','#7C3AED','#F97316','#06B6D4','#EAB308','#DB2777','#1E40AF','#84CC16','#0F766E','#F43F5E','#8B5CF6','#0EA5E9','#15803D','#C2410C','#475569','#A21CAF','#A16207','#14B8A6','#BE185D','#4D7C0F','#0369A1','#B91C1C'];
 function hashString(str=''){let h=0;for(let i=0;i<str.length;i++)h=((h<<5)-h)+str.charCodeAt(i)|0;return Math.abs(h);}
 function personColor(p){const list=state?.people?.[state.mode]||[];const idx=list.findIndex(x=>x.id===p?.id);if(idx>=0)return PERSON_COLORS[idx%PERSON_COLORS.length];return PERSON_COLORS[hashString(p?.id||p?.name||'')%PERSON_COLORS.length];}
 function personColorStyle(p){return `--person-color:${personColor(p)}`;}
 function personNameHtml(p){return `<span class="person-name-tag" style="${personColorStyle(p)}"><i></i><strong>${escapeHtml(p.name)}</strong></span>`;}
 function governmentWorkdayCount(){const key=`${state.year}-${state.month}-${holidayRevision}`;if(key!==workdayCacheKey){workdayCacheKey=key;const hm=holidayMap();workdayCacheValue=monthDates().filter(d=>isWeekday(d)&&!hm.has(d)).length;}return workdayCacheValue;}
 function staffMinTotal(p){if(p?.minTotalDuty!==null&&p?.minTotalDuty!==''&&!Number.isNaN(Number(p.minTotalDuty)))return Math.max(0,Number(p.minTotalDuty));return governmentWorkdayCount();}
-function staffMorningCount(date){if(!isWeekday(date)||holidayMap().has(date))return 1;const sp=state.staffSpecials.find(x=>x.date===date);const raw=sp?.count??(sp?.staff2?2:state.settings.staffMorningBase);return clamp(Number(raw)||1,1,2);}
+function staffMorningCount(date){
+  if(isHoliday(date)&&state.settings.holidayStaffingDifferent)return clamp(Number(state.settings.staffHolidayReq?.M)||0,0,2);
+  if(!isWeekday(date)||holidayMap().has(date))return 1;
+  const sp=state.staffSpecials.find(x=>x.date===date);
+  const raw=sp?.count??(sp?.staff2?2:state.settings.staffMorningBase);
+  return clamp(Number(raw)||1,1,2);
+}
+function staffShiftCount(date,shift){
+  if(isHoliday(date)&&state.settings.holidayStaffingDifferent){
+    return clamp(Number(state.settings.staffHolidayReq?.[shift])||0,0,2);
+  }
+  if(shift==='M')return staffMorningCount(date);
+  return 1;
+}
+function residentReqForDate(date,shift){
+  const source=state.settings.holidayStaffingDifferent&&isHoliday(date)?state.settings.residentHolidayReq:state.settings.residentReq;
+  return source[shift];
+}
+function activeRelaxations(){return state.settings.solverRelaxations||{allowRequestedOffBreak:false,allowLong888:false,weekdayMorningReducedDates:[]};}
+function relaxationSummary(){
+  const r=activeRelaxations(),parts=[];
+  if(r.allowRequestedOffBreak)parts.push('อนุญาตฝืน “ขอ Off” เมื่อจำเป็น');
+  if(r.allowLong888)parts.push('อนุญาต 8-เว้น-8 ต่อเนื่องเกิน 3 เวร');
+  if((r.weekdayMorningReducedDates||[]).length)parts.push(`ลดกำลังเช้าวันธรรมดา ${r.weekdayMorningReducedDates.length} วัน`);
+  return parts;
+}
 
 function defaultPeople(mode){
   if(mode==='resident') return [
     ['Resident 1-A','R1',false],['Resident 1-B','R1',false],['Resident 1-C','R1',false],
     ['Resident 2-A','R2',true],['Resident 2-B','R2',true],['Resident 2-C','R2',true],
     ['Resident 3-A','R3',true],['Resident 3-B','R3',true],['Resident 3-C','R3',true]
-  ].map(([name,level,chief])=>({id:uid('p'),name,level,chiefEligible:chief,rotation:'inside_all',maxOverride:null,onCallMax:7,minTotalDuty:null,note:'',conditions:{off:[],avoid:[],request:[],weekendOffCount:0,freeText:''}}));
-  return ['Staff A','Staff B','Staff C','Staff D','Staff E','Staff F'].map(name=>({id:uid('p'),name,level:'STAFF',chiefEligible:false,rotation:'inside_all',maxOverride:null,onCallMax:7,minTotalDuty:null,note:'',conditions:{off:[],avoid:[],request:[],weekendOffCount:0,freeText:''}}));
+  ].map(([name,level,chief])=>({id:uid('p'),name,level,chiefEligible:chief,rotation:'inside_all',maxOverride:null,onCallMax:7,minTotalDuty:null,note:'',conditions:{hardOff:[],off:[],avoid:[],request:[],weekendOffCount:0,freeText:''}}));
+  return ['Staff A','Staff B','Staff C','Staff D','Staff E','Staff F'].map(name=>({id:uid('p'),name,level:'STAFF',chiefEligible:false,rotation:'inside_all',maxOverride:null,onCallMax:7,minTotalDuty:null,note:'',conditions:{hardOff:[],off:[],avoid:[],request:[],weekendOffCount:0,freeText:''}}));
 }
 
 function defaultState(){
   const now=new Date();
   return {
-    version:5, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
+    version:6, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
     settings:{
       residentCaps:{R1:24,R2:23,R3:22,outBkk:7},
       residentReq:{M:{min:1,target:2,max:2,chief:true},E:{min:1,target:2,max:2,chief:true},N:{min:1,target:2,max:2,chief:true}},
+      residentHolidayReq:{M:{min:1,target:2,max:2,chief:true},E:{min:1,target:2,max:2,chief:true},N:{min:1,target:2,max:2,chief:true}},
+      holidayStaffingDifferent:false,
+      staffHolidayReq:{M:1,E:1,N:1},
       noAdjacent:true,avoid888:true,r1WedOff:true,strictRequests:false,
-      staffMorningBase:1,staffOnCallCount:1,staffConsecutivePolicy:'prefer'
+      staffMorningBase:1,staffOnCallCount:1,staffConsecutivePolicy:'prefer',
+      solverRelaxations:{allowRequestedOffBreak:false,allowLong888:false,weekdayMorningReducedDates:[]}
     },
     people:{resident:defaultPeople('resident'),staff:defaultPeople('staff')},
     holidays:OFFICIAL_2026.map(([date,name])=>({id:uid('h'),date,name,source:'preset'})),
@@ -412,7 +503,8 @@ let state = loadState();
 let currentPage='setup';
 let currentResult='daily';
 let editAssignmentContext=null;
-let conditionPaintMode='off';
+let lastAuditData=null;
+let conditionPaintMode='hardOff';
 let conditionPainting=false;
 let conditionPaintAction='apply';
 let conditionPaintVisited=new Set();
@@ -434,13 +526,38 @@ function loadState(){
 }
 function migrateState(s){
   const d=defaultState();
-  const oldVersion=Number(s.version||1);const migrated={...d,...s,version:5,settings:{...d.settings,...(s.settings||{}),residentCaps:{...d.settings.residentCaps,...(s.settings?.residentCaps||{})},residentReq:{...d.settings.residentReq,...(s.settings?.residentReq||{})}},people:{resident:s.people?.resident||d.people.resident,staff:s.people?.staff||d.people.staff},schedules:oldVersion<2?{resident:null,staff:null}:{resident:s.schedules?.resident||null,staff:s.schedules?.staff||null},staffSpecials:Array.isArray(s.staffSpecials)?s.staffSpecials:[]};
-  for(const mode of ['resident','staff']) for(const p of migrated.people[mode]) ensurePersonConditions(p);
+  const oldVersion=Number(s.version||1);
+  const migrated={
+    ...d,...s,version:6,
+    settings:{
+      ...d.settings,...(s.settings||{}),
+      residentCaps:{...d.settings.residentCaps,...(s.settings?.residentCaps||{})},
+      residentReq:{...d.settings.residentReq,...(s.settings?.residentReq||{})},
+      residentHolidayReq:{...d.settings.residentHolidayReq,...(s.settings?.residentHolidayReq||{})},
+      staffHolidayReq:{...d.settings.staffHolidayReq,...(s.settings?.staffHolidayReq||{})},
+      solverRelaxations:{...d.settings.solverRelaxations,...(s.settings?.solverRelaxations||{})}
+    },
+    people:{resident:s.people?.resident||d.people.resident,staff:s.people?.staff||d.people.staff},
+    schedules:oldVersion<2?{resident:null,staff:null}:{resident:s.schedules?.resident||null,staff:s.schedules?.staff||null},
+    staffSpecials:Array.isArray(s.staffSpecials)?s.staffSpecials:[]
+  };
+  for(const mode of ['resident','staff']){
+    for(const p of migrated.people[mode]){
+      p.conditions=p.conditions||{};
+      if(oldVersion<6&&!Array.isArray(p.conditions.hardOff)){
+        p.conditions.hardOff=Array.isArray(p.conditions.off)?deepClone(p.conditions.off):[];
+        p.conditions.off=[];
+      }
+      ensurePersonConditions(p);
+    }
+  }
   migrated.staffSpecials=migrated.staffSpecials.map(x=>({...x,count:clamp(Number(x.count??(x.staff2?2:1))||1,1,2),activity:!!x.activity}));
+  migrated.settings.solverRelaxations.weekdayMorningReducedDates=Array.isArray(migrated.settings.solverRelaxations.weekdayMorningReducedDates)?migrated.settings.solverRelaxations.weekdayMorningReducedDates:[];
   return migrated;
 }
 function ensurePersonConditions(p){
   p.conditions=p.conditions||{};
+  p.conditions.hardOff=Array.isArray(p.conditions.hardOff)?p.conditions.hardOff:[];
   p.conditions.off=Array.isArray(p.conditions.off)?p.conditions.off:[];
   p.conditions.avoid=Array.isArray(p.conditions.avoid)?p.conditions.avoid:[];
   p.conditions.request=Array.isArray(p.conditions.request)?p.conditions.request:[];
@@ -626,8 +743,8 @@ function bindEvents(){
   document.querySelectorAll('.result-tab').forEach(b=>b.addEventListener('click',()=>showResult(b.dataset.result)));
   byId('monthSelect').addEventListener('change',e=>{state.month=Number(e.target.value);invalidateSchedule();ensureDatesInMonth();renderAll();saveState(false)});
   byId('yearInput').addEventListener('change',e=>{state.year=clamp(Number(e.target.value)||new Date().getFullYear(),2020,2100);invalidateSchedule();ensureDatesInMonth();renderAll();saveState(false)});
-  ['capR1','capR2','capR3','capOutBkk','resMMin','resMTarget','resMMax','resEMin','resETarget','resEMax','resNMin','resNTarget','resNMax','staffMorningBase','staffOnCallCount','staffConsecutivePolicy'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
-  ['resMChief','resEChief','resNChief','noAdjacent','avoid888','r1WedOff','strictRequests'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
+  ['capR1','capR2','capR3','capOutBkk','resMMin','resMTarget','resMMax','resEMin','resETarget','resEMax','resNMin','resNTarget','resNMax','resHolMMin','resHolMTarget','resHolMMax','resHolEMin','resHolETarget','resHolEMax','resHolNMin','resHolNTarget','resHolNMax','staffMorningBase','staffOnCallCount','staffConsecutivePolicy','staffHolMCount','staffHolECount','staffHolNCount'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
+  ['resMChief','resEChief','resNChief','resHolMChief','resHolEChief','resHolNChief','holidayStaffingDifferent','noAdjacent','avoid888','r1WedOff','strictRequests'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
   byId('btnSave').addEventListener('click',createNamedSnapshot);
   byId('btnSnapshots').addEventListener('click',openSavedWorkDialog);
   byId('btnCreateSnapshot').addEventListener('click',createNamedSnapshot);
@@ -650,6 +767,7 @@ function bindEvents(){
   byId('btnFetchHolidays').addEventListener('click',fetchThaiHolidays);
   byId('btnAddStaffSpecial').addEventListener('click',addStaffSpecial);
   byId('btnGenerate').addEventListener('click',generateScheduleExact);
+  byId('btnRefreshSchedule').addEventListener('click',generateScheduleExact);
   byId('btnAiAudit').addEventListener('click',runAiScheduleAudit);
   byId('personalSelect').addEventListener('change',renderPersonalSchedule);
   byId('btnExportExcel').addEventListener('click',exportExcel);
@@ -664,7 +782,12 @@ function byId(id){ return document.getElementById(id); }
 function syncControlsFromState(){
   byId('monthSelect').value=state.month; byId('yearInput').value=state.year;
   byId('capR1').value=state.settings.residentCaps.R1; byId('capR2').value=state.settings.residentCaps.R2; byId('capR3').value=state.settings.residentCaps.R3; byId('capOutBkk').value=state.settings.residentCaps.outBkk;
-  for(const s of ['M','E','N']){ byId(`res${s}Min`).value=state.settings.residentReq[s].min; byId(`res${s}Target`).value=state.settings.residentReq[s].target; byId(`res${s}Max`).value=state.settings.residentReq[s].max; byId(`res${s}Chief`).checked=state.settings.residentReq[s].chief; }
+  for(const s of ['M','E','N']){
+    byId(`res${s}Min`).value=state.settings.residentReq[s].min; byId(`res${s}Target`).value=state.settings.residentReq[s].target; byId(`res${s}Max`).value=state.settings.residentReq[s].max; byId(`res${s}Chief`).checked=state.settings.residentReq[s].chief;
+    byId(`resHol${s}Min`).value=state.settings.residentHolidayReq[s].min; byId(`resHol${s}Target`).value=state.settings.residentHolidayReq[s].target; byId(`resHol${s}Max`).value=state.settings.residentHolidayReq[s].max; byId(`resHol${s}Chief`).checked=state.settings.residentHolidayReq[s].chief;
+  }
+  byId('holidayStaffingDifferent').checked=!!state.settings.holidayStaffingDifferent;
+  byId('staffHolMCount').value=state.settings.staffHolidayReq.M;byId('staffHolECount').value=state.settings.staffHolidayReq.E;byId('staffHolNCount').value=state.settings.staffHolidayReq.N;
   byId('noAdjacent').checked=state.settings.noAdjacent; byId('avoid888').checked=state.settings.avoid888; byId('r1WedOff').checked=state.settings.r1WedOff; byId('strictRequests').checked=state.settings.strictRequests;
   byId('staffMorningBase').value=state.settings.staffMorningBase; byId('staffOnCallCount').value=state.settings.staffOnCallCount; byId('staffConsecutivePolicy').value=state.settings.staffConsecutivePolicy;
 }
@@ -674,7 +797,12 @@ function readSettingsFromControls(){
     const min=Math.max(0,+byId(`res${s}Min`).value), max=Math.max(min,+byId(`res${s}Max`).value), target=clamp(+byId(`res${s}Target`).value,min,max);
     state.settings.residentReq[s]={min,target,max,chief:byId(`res${s}Chief`).checked};
     byId(`res${s}Min`).value=min;byId(`res${s}Max`).value=max;byId(`res${s}Target`).value=target;
+    const hMin=Math.max(0,+byId(`resHol${s}Min`).value), hMax=Math.max(hMin,+byId(`resHol${s}Max`).value), hTarget=clamp(+byId(`resHol${s}Target`).value,hMin,hMax);
+    state.settings.residentHolidayReq[s]={min:hMin,target:hTarget,max:hMax,chief:byId(`resHol${s}Chief`).checked};
+    byId(`resHol${s}Min`).value=hMin;byId(`resHol${s}Max`).value=hMax;byId(`resHol${s}Target`).value=hTarget;
   }
+  state.settings.holidayStaffingDifferent=byId('holidayStaffingDifferent').checked;
+  state.settings.staffHolidayReq={M:clamp(+byId('staffHolMCount').value||0,0,2),E:clamp(+byId('staffHolECount').value||0,0,2),N:clamp(+byId('staffHolNCount').value||0,0,2)};
   state.settings.noAdjacent=byId('noAdjacent').checked;state.settings.avoid888=byId('avoid888').checked;state.settings.r1WedOff=byId('r1WedOff').checked;state.settings.strictRequests=byId('strictRequests').checked;
   state.settings.staffMorningBase=+byId('staffMorningBase').value;state.settings.staffOnCallCount=+byId('staffOnCallCount').value;state.settings.staffConsecutivePolicy=byId('staffConsecutivePolicy').value;
   invalidateSchedule();renderAll();saveState(false);
@@ -684,18 +812,23 @@ function showPage(page){ currentPage=page;document.querySelectorAll('.page').for
 function showResult(result){ currentResult=result;document.querySelectorAll('.result-tab').forEach(b=>b.classList.toggle('active',b.dataset.result===result));document.querySelectorAll('.result-panel').forEach(p=>p.classList.toggle('active',p.id===`result-${result}`));if(result==='personal')renderPersonalSchedule();saveViewState(); }
 function syncModeVisibility(){
   const staff=state.mode==='staff';
-  byId('residentCapsCard').hidden=staff;byId('residentReqCard').hidden=staff;byId('staffRuleCard').hidden=!staff;byId('r1WedWrap').hidden=staff;byId('staffSpecialCard').hidden=!staff;byId('staff2Legend').hidden=!staff;byId('activityLegend').hidden=!staff;byId('levelWrap').hidden=staff;byId('chiefWrap').hidden=staff;byId('rotationWrap').hidden=staff;byId('dialogOnCallWrap').hidden=!staff;byId('onCallMaxWrap').hidden=!staff;byId('minTotalDutyWrap').hidden=!staff;byId('dialogMinTotalWrap').hidden=!staff;
+  byId('residentCapsCard').hidden=staff;byId('residentReqCard').hidden=staff;byId('staffRuleCard').hidden=!staff;
+  byId('residentHolidayReqCard').hidden=staff||!state.settings.holidayStaffingDifferent;
+  byId('staffHolidayReqCard').hidden=!staff||!state.settings.holidayStaffingDifferent;
+  byId('r1WedWrap').hidden=staff;byId('staffSpecialCard').hidden=!staff;byId('staff2Legend').hidden=!staff;byId('activityLegend').hidden=!staff;byId('levelWrap').hidden=staff;byId('chiefWrap').hidden=staff;byId('rotationWrap').hidden=staff;byId('dialogOnCallWrap').hidden=!staff;byId('onCallMaxWrap').hidden=!staff;byId('minTotalDutyWrap').hidden=!staff;byId('dialogMinTotalWrap').hidden=!staff;
 }
 function invalidateSchedule(){ state.schedules[state.mode]=null; }
 function ensureDatesInMonth(){
   const prefix=`${state.year}-${pad(state.month+1)}-`;
   for(const p of people()){
     ensurePersonConditions(p);
+    p.conditions.hardOff=p.conditions.hardOff.filter(c=>c.date.startsWith(prefix));
     p.conditions.off=p.conditions.off.filter(c=>c.date.startsWith(prefix));
     p.conditions.avoid=p.conditions.avoid.filter(c=>c.date.startsWith(prefix));
     p.conditions.request=p.conditions.request.filter(c=>c.date.startsWith(prefix));
   }
   state.staffSpecials=state.staffSpecials.filter(x=>x.date.startsWith(prefix));
+  state.settings.solverRelaxations.weekdayMorningReducedDates=(state.settings.solverRelaxations.weekdayMorningReducedDates||[]).filter(x=>x.startsWith(prefix));
 }
 function renderAll(){ syncModeVisibility();renderMonthPreview();renderPeople();renderConditionUI();renderHolidays();renderGeneratePage();if(currentPage==='results')renderResults(); }
 function renderMonthPreview(){
@@ -728,7 +861,7 @@ function savePersonFromDialog(e){
   e.preventDefault(); const name=byId('personName').value.trim(); if(!name){toast('กรุณาระบุชื่อ');return;}
   const id=byId('personId').value; let p=id?getPerson(id):null;
   const base={name,level:state.mode==='resident'?byId('personLevel').value:'STAFF',chiefEligible:state.mode==='resident'&&byId('personChief').checked,rotation:state.mode==='resident'?byId('personRotation').value:'inside_all',maxOverride:byId('dialogMaxOverride').value===''?null:+byId('dialogMaxOverride').value,onCallMax:byId('dialogOnCallMax').value===''?null:+byId('dialogOnCallMax').value,minTotalDuty:state.mode==='staff'?(byId('dialogMinTotalDuty').value===''?null:+byId('dialogMinTotalDuty').value):null,note:byId('personNote').value.trim()};
-  if(p) Object.assign(p,base); else people().push({id:uid('p'),...base,conditions:{off:[],avoid:[],request:[],weekendOffCount:0,freeText:''}});
+  if(p) Object.assign(p,base); else people().push({id:uid('p'),...base,conditions:{hardOff:[],off:[],avoid:[],request:[],weekendOffCount:0,freeText:''}});
   invalidateSchedule();ensureSelectedPerson();saveState(false);renderAll();byId('personDialog').close();toast('บันทึกรายชื่อแล้ว');
 }
 function deletePerson(id){ const p=getPerson(id); if(!p)return; if(!confirm(`ลบ ${p.name}?`))return; state.people[state.mode]=people().filter(x=>x.id!==id);invalidateSchedule();ensureSelectedPerson();renderAll();saveState(false); }
@@ -747,12 +880,16 @@ function renderConditionUI(){
 }
 function conditionTypeAt(p,date,shift){
   ensurePersonConditions(p);
-  for(const type of ['off','avoid','request']) if(p.conditions[type].some(c=>c.date===date&&c.shifts.includes(shift))) return type;
+  for(const type of ['hardOff','off','avoid','request']) if(p.conditions[type].some(c=>c.date===date&&c.shifts.includes(shift))) return type;
   return null;
 }
 function conditionCellAvailability(p,date,shift){
   if(state.mode==='staff'){
-    if(shift==='M2'&&staffMorningCount(date)!==2)return {ok:false,reason:'วันนี้ไม่ได้เปิดตำแหน่ง Staff 2'};
+    const morningCount=staffShiftCount(date,'M');
+    if(shift==='M1'&&morningCount<1)return {ok:false,reason:'วันนี้ไม่ได้เปิดเวรเช้า'};
+    if(shift==='M2'&&morningCount<2)return {ok:false,reason:'วันนี้ไม่ได้เปิดตำแหน่ง Staff 2'};
+    if(shift==='E'&&staffShiftCount(date,'E')<1)return {ok:false,reason:'วันนี้ไม่ได้เปิดเวรบ่าย'};
+    if(shift==='N'&&staffShiftCount(date,'N')<1)return {ok:false,reason:'วันนี้ไม่ได้เปิดเวรดึก'};
     if(shift==='OC'&&Number(state.settings.staffOnCallCount||0)===0)return {ok:false,reason:'เดือนนี้ไม่ได้เปิดเวร On call'};
     return {ok:true,reason:''};
   }
@@ -760,8 +897,8 @@ function conditionCellAvailability(p,date,shift){
   if(state.settings.r1WedOff&&p.level==='R1'&&parseISO(date).getDay()===3&&shift==='M')return {ok:false,reason:'R1 off พุธเช้าสำหรับ Basic science'};
   return {ok:true,reason:''};
 }
-function conditionTypeLabel(type){return type==='off'?'OFF บังคับ':type==='avoid'?'ไม่ Prefer':type==='request'?'ขออยู่เวร':'ไม่มีเงื่อนไข';}
-function conditionCellText(type){return type==='off'?'OFF':type==='avoid'?'เลี่ยง':type==='request'?'ขออยู่':'—';}
+function conditionTypeLabel(type){return type==='hardOff'?'OFF บังคับ (เรียน/สอบ/Vacation)':type==='off'?'ขอ Off':type==='avoid'?'เลี่ยง':type==='request'?'ขออยู่เวร':'ไม่มีเงื่อนไข';}
+function conditionCellText(type){return type==='hardOff'?'ห้าม':type==='off'?'OFF':type==='avoid'?'เลี่ยง':type==='request'?'ขออยู่':'—';}
 function renderConditionCalendar(p){
   const shifts=conditionShiftOptions(),hm=holidayMap();
   const head=shifts.map(sh=>`<th>${SHIFT_LABELS[sh]}</th>`).join('');
@@ -774,13 +911,13 @@ function renderConditionCalendar(p){
 }
 function renderConditionList(p){
   ensurePersonConditions(p);
-  const labels={off:'OFF บังคับ',avoid:'ไม่ Prefer',request:'ขออยู่เวร'};
-  const items=['off','avoid','request'].flatMap(type=>p.conditions[type].map(x=>({...x,type}))).sort((a,b)=>a.date.localeCompare(b.date)||a.type.localeCompare(b.type));
+  const labels={hardOff:'OFF บังคับ (เรียน/สอบ/Vacation)',off:'ขอ Off',avoid:'เลี่ยง',request:'ขออยู่เวร'};
+  const items=['hardOff','off','avoid','request'].flatMap(type=>p.conditions[type].map(x=>({...x,type}))).sort((a,b)=>a.date.localeCompare(b.date)||a.type.localeCompare(b.type));
   byId('conditionList').innerHTML=items.length?items.map(c=>`<div class="condition-item type-${c.type}"><div><strong>${labels[c.type]} • ${fmtDate(c.date,true)}</strong><small>${c.shifts.map(s=>SHIFT_LABELS[s]).join(', ')}</small></div><button class="remove-btn" data-remove-condition="${p.id}|${c.type}|${c.id}">ลบ</button></div>`).join(''):'<div class="hint">ยังไม่มีเงื่อนไขแบบระบุวัน</div>';
 }
 function updatePaintToolbar(){
   document.querySelectorAll('[data-paint-mode]').forEach(b=>b.classList.toggle('active',b.dataset.paintMode===conditionPaintMode));
-  const labels={off:'OFF บังคับ',avoid:'ไม่ Prefer',request:'ขออยู่เวร',erase:'ยางลบ'};byId('conditionPaintStatus').innerHTML=`กำลังใช้: <b>${labels[conditionPaintMode]}</b> • คลิกหรือลากผ่านช่องที่ต้องการ`;
+  const labels={hardOff:'OFF บังคับ',off:'ขอ Off',avoid:'เลี่ยง',request:'ขออยู่เวร',erase:'ยางลบ'};byId('conditionPaintStatus').innerHTML=`กำลังใช้: <b>${labels[conditionPaintMode]}</b> • คลิกหรือลากผ่านช่องที่ต้องการ`;
 }
 function selectConditionPaintMode(e){const btn=e.target.closest('[data-paint-mode]');if(!btn)return;conditionPaintMode=btn.dataset.paintMode;updatePaintToolbar();}
 function removeShiftFromType(p,type,date,shift){
@@ -788,12 +925,12 @@ function removeShiftFromType(p,type,date,shift){
 }
 function setConditionCell(p,date,shift,mode,action='apply'){
   ensurePersonConditions(p);
-  if(action==='erase'||mode==='erase'){for(const type of ['off','avoid','request'])removeShiftFromType(p,type,date,shift);return;}
-  for(const type of ['off','avoid','request'])removeShiftFromType(p,type,date,shift);
+  if(action==='erase'||mode==='erase'){for(const type of ['hardOff','off','avoid','request'])removeShiftFromType(p,type,date,shift);return;}
+  for(const type of ['hardOff','off','avoid','request'])removeShiftFromType(p,type,date,shift);
   let c=p.conditions[mode].find(x=>x.date===date);if(!c){c={id:uid('c'),date,shifts:[]};p.conditions[mode].push(c);}if(!c.shifts.includes(shift))c.shifts.push(shift);
 }
 function updateConditionCellVisual(el,p){
-  if(!el)return;const [date,shift]=el.dataset.conditionCell.split('|'),type=conditionTypeAt(p,date,shift);el.classList.remove('condition-off','condition-avoid','condition-request');if(type)el.classList.add(`condition-${type}`);el.textContent=conditionCellText(type);el.title=conditionTypeLabel(type);el.classList.add('paint-flash');setTimeout(()=>el.classList.remove('paint-flash'),110);
+  if(!el)return;const [date,shift]=el.dataset.conditionCell.split('|'),type=conditionTypeAt(p,date,shift);el.classList.remove('condition-hardOff','condition-off','condition-avoid','condition-request');if(type)el.classList.add(`condition-${type}`);el.textContent=conditionCellText(type);el.title=conditionTypeLabel(type);el.classList.add('paint-flash');setTimeout(()=>el.classList.remove('paint-flash'),110);
 }
 function paintOneConditionCell(el){
   const p=selectedConditionPerson();if(!p||!el?.dataset.conditionCell)return;const key=el.dataset.conditionCell;if(conditionPaintVisited.has(key))return;
@@ -852,25 +989,46 @@ function fixedThaiHolidays(y){
 function addStaffSpecial(){const date=byId('staffSpecialDate').value,activity=byId('isActivity').checked;let count=clamp(+byId('staffSpecialCount').value||1,1,2);if(!date){toast('กรุณาเลือกวันที่');return;}if(isHoliday(date)){toast('กำหนด 1–2 คนได้เฉพาะวันทำการ');return;}if(activity)count=2;let x=state.staffSpecials.find(s=>s.date===date);if(x)Object.assign(x,{count,activity});else state.staffSpecials.push({id:uid('ss'),date,count,activity});invalidateSchedule();saveState(false);renderAll();toast(`บันทึก ${fmtDate(date)} เวรเช้า ${count} คนแล้ว`);}
 
 function demandForMode(){
-  const dates=monthDates();if(state.mode==='resident'){
-    const perDay=Object.values(state.settings.residentReq).reduce((a,x)=>a+x.target,0);return {actual:dates.length*perDay,oncall:0,detail:`${dates.length} วัน × ${perDay} ตำแหน่ง/วัน = ${dates.length*perDay} ตำแหน่ง`};
+  const dates=monthDates(),reduced=new Set(activeRelaxations().weekdayMorningReducedDates||[]);
+  if(state.mode==='resident'){
+    let actual=0,holidayDays=0;
+    for(const date of dates){
+      if(isHoliday(date))holidayDays++;
+      for(const sh of ['M','E','N']){
+        let count=residentReqForDate(date,sh).target;
+        if(sh==='M'&&isWeekday(date)&&!isPublicHoliday(date)&&reduced.has(date))count=Math.max(0,count-1);
+        actual+=count;
+      }
+    }
+    const detail=state.settings.holidayStaffingDifferent
+      ? `วันธรรมดาและวันหยุดใช้จำนวนคนต่างกัน • วันหยุด ${holidayDays} วัน • รวม ${actual} ตำแหน่ง`
+      : `${dates.length} วัน • รวม ${actual} ตำแหน่ง`;
+    return {actual,oncall:0,detail};
   }
-  let actual=0;for(const d of dates){actual+=3;if(staffMorningCount(d)===2)actual+=1;}const oc=dates.length*state.settings.staffOnCallCount;const twoPersonDays=dates.filter(d=>staffMorningCount(d)===2).length;return {actual,oncall:oc,detail:`เวรจริง ${actual} ตำแหน่ง • เวรเช้า 2 คน ${twoPersonDays} วัน${oc?` • On call ${oc} ตำแหน่ง`:''}`};
+  let actual=0,twoPersonDays=0;
+  for(const d of dates){
+    let morning=staffShiftCount(d,'M');
+    if(isWeekday(d)&&!isPublicHoliday(d)&&reduced.has(d))morning=Math.max(0,morning-1);
+    actual+=morning+staffShiftCount(d,'E')+staffShiftCount(d,'N');
+    if(morning===2)twoPersonDays++;
+  }
+  const oc=dates.length*state.settings.staffOnCallCount;
+  return {actual,oncall:oc,detail:`เวรจริง ${actual} ตำแหน่ง • เวรเช้า 2 คน ${twoPersonDays} วัน${state.settings.holidayStaffingDifferent?' • วันหยุดใช้กติกาแยก':''}${oc?` • On call ${oc} ตำแหน่ง`:''}`};
 }
 function renderGeneratePage(){
   const d=demandForMode(),ps=people();byId('demandSummary').innerHTML=`<div class="summary-cards"><div class="metric-card"><small>บุคลากร</small><strong>${ps.length}</strong></div><div class="metric-card"><small>ตำแหน่งเวรจริง</small><strong>${d.actual}</strong></div>${state.mode==='staff'?`<div class="metric-card"><small>On call</small><strong>${d.oncall}</strong></div>`:''}</div><p class="hint">${d.detail}</p>`;
   const checks=preflightChecks();byId('preflightBox').innerHTML=`<div class="check-list">${checks.map(c=>`<div class="check-row"><span class="check-icon ${c.ok?'ok':'warn'}">${c.ok?'✓':'!'}</span><span>${c.text}</span></div>`).join('')}</div>`;
-  const s=schedule();byId('btnGenerate').textContent=s?'↻ Exact Solver สร้างตารางทางเลือก':'Exact Solver จัดเวร + AI ตรวจ';byId('generationReport').innerHTML=s?`<div class="alert ${s.unfilled.length?'warning':'success'}" style="margin-top:18px"><strong>${s.unfilled.length?'จัดเวรได้บางส่วน':'จัดเวรสำเร็จด้วย Exact Solver'}</strong><br>${s.unfilled.length?`ยังว่าง ${s.unfilled.length} ตำแหน่ง`:`ครบทุกตำแหน่ง • ${escapeHtml(s.solverMeta?.status||'FEASIBLE')} • ใช้เวลา ${Number(s.solverMeta?.wallTimeSeconds||0).toFixed(2)} วินาที • กดจัดใหม่เพื่อสร้างตารางทางเลือก`}</div>`:'';
+  const s=schedule(),active=relaxationSummary();byId('btnGenerate').textContent=s?'↻ Exact Solver สร้างตารางทางเลือก':'Exact Solver จัดเวร + AI ตรวจ';byId('generationReport').innerHTML=s?`<div class="alert ${s.unfilled.length?'warning':'success'}" style="margin-top:18px"><strong>${s.unfilled.length?'จัดเวรได้บางส่วน':'จัดเวรสำเร็จด้วย Exact Solver'}</strong><br>${s.unfilled.length?`ยังว่าง ${s.unfilled.length} ตำแหน่ง`:`ครบทุกตำแหน่ง • ${escapeHtml(s.solverMeta?.status||'FEASIBLE')} • ใช้เวลา ${Number(s.solverMeta?.wallTimeSeconds||0).toFixed(2)} วินาที • กดจัดใหม่เพื่อสร้างตารางทางเลือก`}</div>${active.length?`<div class="relaxation-strip"><b>ตารางนี้ใช้ทางผ่อน:</b> ${escapeHtml(active.join(' • '))}</div>`:''}`:'';
 }
 function preflightChecks(){
   const ps=people(),d=demandForMode(),checks=[];checks.push({ok:ps.length>0,text:ps.length?`มีรายชื่อ ${ps.length} คน`:'ยังไม่มีรายชื่อ'});
   if(state.mode==='resident'){
-    const chiefs=ps.filter(p=>p.chiefEligible&&p.rotation!=='out_province_all').length,needChief=Object.values(state.settings.residentReq).some(x=>x.chief);checks.push({ok:!needChief||chiefs>0,text:needChief?`มีผู้เป็น Chief ได้ ${chiefs} คน`:'ไม่ได้บังคับ Chief'});
+    const chiefs=ps.filter(p=>p.chiefEligible&&p.rotation!=='out_province_all').length,needChief=[...Object.values(state.settings.residentReq),...(state.settings.holidayStaffingDifferent?Object.values(state.settings.residentHolidayReq):[])].some(x=>x.chief);checks.push({ok:!needChief||chiefs>0,text:needChief?`มีผู้เป็น Chief ได้ ${chiefs} คน`:'ไม่ได้บังคับ Chief'});
     const totalCap=ps.reduce((a,p)=>a+personCap(p),0);checks.push({ok:totalCap>=d.actual,text:`โควตารวมโดยประมาณ ${totalCap} เทียบกับความต้องการ ${d.actual} ตำแหน่ง`});
   }else{
     const realCap=ps.reduce((a,p)=>a+(p.maxOverride??999),0),ocCap=ps.reduce((a,p)=>a+(p.onCallMax??999),0),minTotal=ps.reduce((a,p)=>a+staffMinTotal(p),0),available=d.actual+d.oncall;checks.push({ok:realCap>=d.actual,text:`เพดานเวรจริงรวม ${realCap>=900?'ไม่จำกัด':realCap} เทียบความต้องการ ${d.actual}`});if(d.oncall)checks.push({ok:ocCap>=d.oncall,text:`เพดาน On call รวม ${ocCap>=900?'ไม่จำกัด':ocCap} เทียบความต้องการ ${d.oncall}`});checks.push({ok:available>=minTotal,text:`ตำแหน่งทั้งหมด ${available} เทียบกับผลรวมขั้นต่ำรายบุคคล ${minTotal}`});
   }
-  const conds=ps.reduce((a,p)=>{ensurePersonConditions(p);return a+p.conditions.off.length+p.conditions.avoid.length+p.conditions.request.length;},0);checks.push({ok:true,text:`บันทึกเงื่อนไขแบบระบุวัน ${conds} รายการ`});
+  const conds=ps.reduce((a,p)=>{ensurePersonConditions(p);return a+p.conditions.hardOff.length+p.conditions.off.length+p.conditions.avoid.length+p.conditions.request.length;},0);checks.push({ok:true,text:`บันทึกเงื่อนไขแบบระบุวัน ${conds} รายการ`});
   const requestSlots=buildSlots(),requestBlocks=buildWeekendBlocks();let impossibleRequests=0;
   for(const p of ps)for(const r of p.conditions.request)for(const sh of r.shifts){const matching=requestSlots.filter(x=>x.date===r.date&&x.shift===sh);if(!matching.some(slot=>staticEligible(p,slot,requestBlocks)))impossibleRequests++;}
   if(impossibleRequests)checks.push({ok:false,text:`มีคำขออยู่เวร ${impossibleRequests} ช่องที่ขัดกับ OFF, รูปแบบการวน, Basic science หรือไม่มีตำแหน่งเวรนั้น`});
@@ -888,19 +1046,35 @@ function addDays(s,n){const d=parseISO(s);d.setDate(d.getDate()+n);return isoDat
 function isCurrentMonth(s){return s.startsWith(`${state.year}-${pad(state.month+1)}-`);}
 function buildSlots(){
   const slots=[];let order=0;
+  const reducedDates=new Set(activeRelaxations().weekdayMorningReducedDates||[]);
   for(const date of monthDates()){
     if(state.mode==='resident'){
-      for(const sh of ['M','E','N']){const req=state.settings.residentReq[sh];for(let i=0;i<req.target;i++)slots.push({key:`${date}|${sh}|${i}`,date,shift:sh,position:i,role:req.chief&&i===0?'Chief':'Resident',start:shiftStart(date,sh),weight:1,order:order++});}
+      for(const sh of ['M','E','N']){
+        const req=residentReqForDate(date,sh);
+        let count=req.target;
+        if(sh==='M'&&isWeekday(date)&&!isPublicHoliday(date)&&reducedDates.has(date))count=Math.max(0,count-1);
+        for(let i=0;i<count;i++)slots.push({key:`${date}|${sh}|${i}`,date,shift:sh,position:i,role:req.chief&&i===0?'Chief':'Resident',start:shiftStart(date,sh),weight:1,order:order++});
+      }
     }else{
-      slots.push({key:`${date}|M1|0`,date,shift:'M1',position:0,role:'Staff 1',start:shiftStart(date,'M1'),weight:1,order:order++});
-      const sp=state.staffSpecials.find(x=>x.date===date);const needM2=staffMorningCount(date)===2;if(needM2)slots.push({key:`${date}|M2|0`,date,shift:'M2',position:0,role:'Staff 2',start:shiftStart(date,'M2'),weight:sp?.activity ? .25 : .65,activity:!!sp?.activity,order:order++});
-      slots.push({key:`${date}|E|0`,date,shift:'E',position:0,role:'บ่าย',start:shiftStart(date,'E'),weight:1,order:order++});slots.push({key:`${date}|N|0`,date,shift:'N',position:0,role:'ดึก',start:shiftStart(date,'N'),weight:1,order:order++});
+      const morningCount=staffShiftCount(date,'M');
+      const eveningCount=staffShiftCount(date,'E');
+      const nightCount=staffShiftCount(date,'N');
+      let adjustedMorning=morningCount;
+      if(isWeekday(date)&&!isPublicHoliday(date)&&reducedDates.has(date))adjustedMorning=Math.max(0,morningCount-1);
+      const sp=state.staffSpecials.find(x=>x.date===date);
+      if(adjustedMorning>=1)slots.push({key:`${date}|M1|0`,date,shift:'M1',position:0,role:'Staff 1',start:shiftStart(date,'M1'),weight:1,order:order++});
+      if(adjustedMorning>=2)slots.push({key:`${date}|M2|0`,date,shift:'M2',position:0,role:'Staff 2',start:shiftStart(date,'M2'),weight:sp?.activity ? .25 : .65,activity:!!sp?.activity,order:order++});
+      for(let i=0;i<eveningCount;i++)slots.push({key:`${date}|E|${i}`,date,shift:'E',position:i,role:i===0?'บ่าย':'บ่ายเสริม',start:shiftStart(date,'E'),weight:1,order:order++});
+      for(let i=0;i<nightCount;i++)slots.push({key:`${date}|N|${i}`,date,shift:'N',position:i,role:i===0?'ดึก':'ดึกเสริม',start:shiftStart(date,'N'),weight:1,order:order++});
       for(let i=0;i<state.settings.staffOnCallCount;i++)slots.push({key:`${date}|OC|${i}`,date,shift:'OC',position:i,role:'On call',start:shiftStart(date,'OC'),weight:0,order:order++});
     }
   }return slots;
 }
 function shiftStart(date,sh){const day=parseISO(date).getDate()-1;const base=day*24;if(sh==='M'||sh==='M1'||sh==='M2')return base+8;if(sh==='E'||sh==='OC')return base+16;return base+24;}
-function offMatches(p,date,shift){
+function hardOffMatches(p,date,shift){
+  ensurePersonConditions(p);for(const c of p.conditions.hardOff){if(c.date===date&&c.shifts.includes(shift))return true;}return false;
+}
+function requestedOffMatches(p,date,shift){
   ensurePersonConditions(p);for(const c of p.conditions.off){if(c.date===date&&c.shifts.includes(shift))return true;}return false;
 }
 function avoidMatches(p,date,shift){
@@ -935,9 +1109,14 @@ function outBkkPreferencePenalty(p,slot){
 }
 function normalizedShift(sh){return sh==='M1'||sh==='M2'?'M':sh;}
 function staticEligible(p,slot,weekendBlocks){
-  if(slot.role==='Chief'&&!p.chiefEligible)return false;if(!rotationAllows(p,slot.date,slot.shift))return false;if(offMatches(p,slot.date,slot.shift))return false;
-  const wb=weekendBlocks.get(p.id)?.set;if(wb&&(wb.has(`${slot.date}|${slot.shift}`)||(state.mode==='staff'&&(slot.shift==='M1'||slot.shift==='M2')&&(wb.has(`${slot.date}|M1`)||wb.has(`${slot.date}|M2`)))))return false;
-  if(state.mode==='resident'&&state.settings.r1WedOff&&p.level==='R1'&&parseISO(slot.date).getDay()===3&&slot.shift==='M')return false;return true;
+  if(slot.role==='Chief'&&!p.chiefEligible)return false;
+  if(!rotationAllows(p,slot.date,slot.shift))return false;
+  if(hardOffMatches(p,slot.date,slot.shift))return false;
+  if(!activeRelaxations().allowRequestedOffBreak&&requestedOffMatches(p,slot.date,slot.shift))return false;
+  const wb=weekendBlocks.get(p.id)?.set;
+  if(!activeRelaxations().allowRequestedOffBreak&&wb&&(wb.has(`${slot.date}|${slot.shift}`)||(state.mode==='staff'&&(slot.shift==='M1'||slot.shift==='M2')&&(wb.has(`${slot.date}|M1`)||wb.has(`${slot.date}|M2`)))))return false;
+  if(state.mode==='resident'&&state.settings.r1WedOff&&p.level==='R1'&&parseISO(slot.date).getDay()===3&&slot.shift==='M')return false;
+  return true;
 }
 function createTrialStats(ps){const stats={};for(const p of ps)stats[p.id]={total:0,actual:0,oncall:0,weight:0,half:{1:0,2:0},shifts:{M:0,E:0,N:0,M1:0,M2:0,OC:0},holiday:0,starts:[],dates:{}};return stats;}
 function hardEligible(p,slot,stats,assignments,weekendBlocks){
@@ -947,7 +1126,7 @@ function hardEligible(p,slot,stats,assignments,weekendBlocks){
   if(state.mode==='resident'){if(st.actual>=personCap(p))return false;if(st.half[halfOfDate(slot.date)]>=halfCap(p,halfOfDate(slot.date)))return false;}
   if(assignments.some(a=>a.personId===p.id&&a.start===slot.start&&a.shift!=='OC'))return false;
   const consecutiveHard=state.mode==='resident'?state.settings.noAdjacent:state.settings.staffConsecutivePolicy==='strict';if(consecutiveHard&&st.starts.some(x=>Math.abs(x-slot.start)===8))return false;
-  if(state.settings.avoid888&&hasFourShiftEightHourRestChainWithCandidate(st.starts,slot.start))return false;
+  if(state.settings.avoid888&&!activeRelaxations().allowLong888&&hasFourShiftEightHourRestChainWithCandidate(st.starts,slot.start))return false;
   return true;
 }
 function candidateScore(p,slot,stats){
@@ -967,7 +1146,7 @@ function candidateScore(p,slot,stats){
   }
   const cap=state.mode==='resident'?Math.max(1,personCap(p)):Math.max(1,p.maxOverride??Math.ceil(daysInMonth(state.year,state.month)*4/Math.max(1,people().length))+5);
   score+=(st.actual/cap)*60+st.weight*2;const ns=normalizedShift(slot.shift);score+=(st.shifts[slot.shift]||0)*8;if(ns==='M')score+=((st.shifts.M||0)+(st.shifts.M1||0)+(st.shifts.M2||0))*5;
-  if(isHoliday(slot.date))score+=st.holiday*13;if(avoidMatches(p,slot.date,slot.shift))score+=260;if(requestMatches(p,slot.date,slot.shift))score-=420;
+  if(isHoliday(slot.date))score+=st.holiday*13;if(avoidMatches(p,slot.date,slot.shift))score+=260;if(requestedOffMatches(p,slot.date,slot.shift))score+=900;if(requestMatches(p,slot.date,slot.shift))score-=420;
   const adj=st.starts.filter(x=>Math.abs(x-slot.start)===8);if(adj.length){if(state.mode==='staff'){const prior=st.starts.find(x=>x===slot.start-8);const pair=prior!==undefined&&slot.shift==='N';score+=state.settings.staffConsecutivePolicy==='prefer'?(pair?28:100):18;}else score+=90;}
   if(st.dates[slot.date])score+=28*st.dates[slot.date];
   score+=outBkkPreferencePenalty(p,slot);
@@ -1072,14 +1251,16 @@ function buildExactSolverPayload(){
 }
 
 function exactSolverReasonHtml(reasons=[]){
-  if(!reasons.length)return '<p class="hint">Exact Solver ไม่พบคำตอบ กรุณาตรวจ OFF, Chief, เพดาน และกฎพัก</p>';
-  return `<div class="issue-list">${reasons.slice(0,12).map(item=>`<div class="issue-card high"><strong>${escapeHtml(item.code||'INFEASIBLE')}</strong><p>${escapeHtml(item.message||'')}</p></div>`).join('')}</div>`;
+  if(!reasons.length)return '<p class="hint">ยังหาตารางที่ผ่านทุกกฎไม่ได้ กรุณาเลือกแนวทางผ่อนด้านล่าง หรือกดจัดใหม่อีกครั้ง</p>';
+  const groups=new Map();
+  for(const item of reasons){const code=item.code||'INFEASIBLE';if(!groups.has(code))groups.set(code,[]);groups.get(code).push(item);}
+  return `<div class="ai-audit-summary-list">${[...groups.entries()].slice(0,5).map(([code,items])=>`<div class="ai-audit-group hard"><div class="ai-audit-group-head"><div><h5>${escapeHtml(violationThaiLabel(code))}</h5><p>${escapeHtml(items[0]?.message||'')}</p></div><span class="ai-audit-count">${items.length}</span></div></div>`).join('')}</div>`;
 }
 
 async function generateScheduleExact(){
   if(!people().length){toast('กรุณาเพิ่มรายชื่อก่อน');return;}
-  const button=byId('btnGenerate'),progress=byId('solverProgress'),progressText=byId('solverProgressText'),report=byId('generationReport');
-  button.disabled=true;progress.hidden=false;report.innerHTML='';
+  const button=byId('btnGenerate'),refreshButton=byId('btnRefreshSchedule'),progress=byId('solverProgress'),progressText=byId('solverProgressText'),report=byId('generationReport');
+  button.disabled=true;if(refreshButton)refreshButton.disabled=true;progress.hidden=false;report.innerHTML='';toast('กำลังให้ Exact Solver จัดตารางใหม่…');
   progressText.textContent='กำลังส่งเงื่อนไขทั้งหมดให้ Google OR-Tools CP-SAT…';
   try{
     const planner=buildExactSolverPayload();
@@ -1087,7 +1268,14 @@ async function generateScheduleExact(){
     const data=await response.json();
     if(!response.ok||!data.ok){
       const result=data.result||{};
-      report.innerHTML=`<div class="alert danger" style="margin-top:18px"><strong>Exact Solver ยังจัดไม่ได้</strong><br>${escapeHtml(result.message||data.message||'ไม่พบคำตอบ')}</div>${exactSolverReasonHtml(result.reasons||[])}`;
+      const failureHtml=`<div class="alert danger" style="margin-top:18px"><strong>Exact Solver ยังจัดไม่ได้</strong><br>${escapeHtml(result.message||data.message||'ไม่พบคำตอบ')}</div>${exactSolverReasonHtml(result.reasons||[])}${repairPanelHtml('ALLOW_REQUESTED_OFF')}`;
+      report.innerHTML=failureHtml;
+      if(currentPage==='results'){
+        byId('aiAuditPanel').hidden=false;
+        byId('aiAuditStatus').className='ai-audit-status fail';
+        byId('aiAuditStatus').textContent='ยังจัดไม่ได้';
+        byId('aiAuditContent').innerHTML=failureHtml;
+      }
       toast('Exact Solver ยังไม่พบตารางที่ผ่าน Hard constraints');
       return;
     }
@@ -1097,17 +1285,17 @@ async function generateScheduleExact(){
       mode:state.mode,year:state.year,month:state.month,createdAt:new Date().toISOString(),
       slots:planner.slots,assignments:result.assignments,unfilled:[],stats:{},issues:[],score:Number(result.objective||0),
       weekendBlocks:weekendObject,
-      solverMeta:{solver:data.solver,status:result.status,objective:result.objective,bestObjectiveBound:result.bestObjectiveBound,wallTimeSeconds:result.wallTimeSeconds,branches:result.branches,conflicts:result.conflicts,randomSeed:result.randomSeed}
+      solverMeta:{solver:data.solver,status:result.status,objective:result.objective,bestObjectiveBound:result.bestObjectiveBound,wallTimeSeconds:result.wallTimeSeconds,branches:result.branches,conflicts:result.conflicts,randomSeed:result.randomSeed,relaxations:deepClone(result.relaxations||activeRelaxations())}
     };
     recomputeSchedule(newSchedule);
-    newSchedule.solverMeta={solver:data.solver,status:result.status,objective:result.objective,bestObjectiveBound:result.bestObjectiveBound,wallTimeSeconds:result.wallTimeSeconds,branches:result.branches,conflicts:result.conflicts,randomSeed:result.randomSeed};
+    newSchedule.solverMeta={solver:data.solver,status:result.status,objective:result.objective,bestObjectiveBound:result.bestObjectiveBound,wallTimeSeconds:result.wallTimeSeconds,branches:result.branches,conflicts:result.conflicts,randomSeed:result.randomSeed,relaxations:deepClone(result.relaxations||activeRelaxations())};
     state.schedules[state.mode]=newSchedule;
     saveState(false);renderGeneratePage();renderResults();showPage('results');
     toast(`Exact Solver จัดครบ ${result.assignmentCount}/${result.slotCount} ตำแหน่ง`);
     setTimeout(()=>runAiScheduleAudit(),250);
   }catch(error){
     report.innerHTML=`<div class="alert danger" style="margin-top:18px"><strong>เชื่อม Exact Solver ไม่สำเร็จ</strong><br>${escapeHtml(error.message||'เกิดข้อผิดพลาด')}</div>`;
-  }finally{progress.hidden=true;button.disabled=false;}
+  }finally{progress.hidden=true;button.disabled=false;if(refreshButton)refreshButton.disabled=false;}
 }
 
 
@@ -1126,11 +1314,69 @@ function buildAuditPlannerState(){
   };
 }
 
-function auditViolationHtml(item,type){
-  return `<div class="ai-audit-item ${type==='soft'?'soft':''}"><strong>${escapeHtml(item.code||'UNKNOWN')}</strong><div>${escapeHtml(item.message||'')}</div></div>`;
+const VIOLATION_THAI={
+  ADJACENT_SHIFTS:'เวรติดกัน',
+  MANDATORY_OFF_ASSIGNED:'ฝืน OFF บังคับ',
+  REQUESTED_OFF_ASSIGNED:'ฝืนขอ Off โดยยังไม่ได้อนุญาต',
+  REQUESTED_OFF_BROKEN:'จำเป็นต้องฝืนขอ Off',
+  AVOID_ASSIGNED:'จัดในช่วงที่ขอให้เลี่ยง',
+  MORE_THAN_THREE_8_HOUR_REST_SHIFTS:'8-เว้น-8 ต่อเนื่องเกิน 3 เวร',
+  LONG_888_CHAIN_APPROVED:'อนุโลม 8-เว้น-8 ต่อเนื่องเกิน 3 เวร',
+  UNFILLED_SLOT:'ตำแหน่งเวรว่าง',
+  MISSING_CHIEF_SLOT:'ตำแหน่ง Chief ว่าง',
+  INELIGIBLE_CHIEF:'Chief ไม่มีสิทธิ์',
+  OUT_PROVINCE_ASSIGNED:'วนนอกต่างจังหวัดแต่ถูกจัดเวร',
+  OUT_BKK_WEEKDAY_MORNING:'วนนอก กทม. ถูกจัดเช้าวันทำการ',
+  R1_WEDNESDAY_MORNING:'R1 ถูกจัดพุธเช้า',
+  MAX_DUTY_EXCEEDED:'เกินเพดานเวร',
+  HALF_MONTH_CAP_EXCEEDED:'เกินเพดานครึ่งเดือน',
+  STRICT_REQUEST_NOT_MET:'คำขออยู่เวรบังคับไม่สำเร็จ',
+  REQUEST_NOT_MET:'คำขออยู่เวรไม่สำเร็จ',
+  WEEKDAY_MORNING_REDUCED:'อนุมัติลดกำลังเวรเช้า',
+  OUT_BKK_WEEKEND:'วนนอกถูกจัดเสาร์–อาทิตย์',
+  OUT_BKK_WEEKDAY_NIGHT:'วนนอกถูกจัดดึกวันทำการ',
+  OUT_BKK_FRIDAY_NIGHT:'วนนอกถูกจัดดึกวันศุกร์',
+  OUT_BKK_SUNDAY_NIGHT:'วนนอกถูกจัดดึกวันอาทิตย์'
+};
+function violationThaiLabel(code){return VIOLATION_THAI[code]||String(code||'ปัญหาอื่น');}
+function groupAuditViolations(items=[]){
+  const groups=new Map();
+  for(const item of items){
+    const code=item.code||'UNKNOWN';
+    if(!groups.has(code))groups.set(code,[]);
+    groups.get(code).push(item);
+  }
+  return [...groups.entries()].sort((a,b)=>b[1].length-a[1].length);
 }
-
+function auditGroupHtml(items,type){
+  if(!items.length)return `<p class="hint">ไม่พบ${type==='hard'?'ข้อผิดพลาดบังคับ':'ข้อที่ควรพิจารณา'}</p>`;
+  return `<div class="ai-audit-summary-list">${groupAuditViolations(items).map(([code,group])=>{
+    const examples=group.slice(0,3).map(x=>`<li>${escapeHtml(x.message||'')}</li>`).join('');
+    const remaining=Math.max(0,group.length-3);
+    return `<section class="ai-audit-group ${type}">
+      <div class="ai-audit-group-head"><div><h5>${escapeHtml(violationThaiLabel(code))}</h5><p>${escapeHtml(group[0]?.message||'')}</p></div><span class="ai-audit-count">${group.length}</span></div>
+      ${group.length>1?`<details class="ai-audit-details"><summary>ดูตัวอย่าง${remaining?` และอีก ${remaining} รายการ`:''}</summary><ul>${examples}</ul></details>`:''}
+    </section>`;
+  }).join('')}</div>`;
+}
+function repairPanelHtml(recommended='NONE'){
+  const active=relaxationSummary();
+  const button=(action,label)=>`<button type="button" class="repair-action ${recommended===action?'recommended':''}" data-repair-action="${action}">${escapeHtml(label)}${recommended===action?' • AI แนะนำ':''}</button>`;
+  return `<div class="repair-panel">
+    <h4>เลือกแนวทางแก้ แล้วให้ Exact Solver จัดใหม่</h4>
+    <p>ระบบจะไม่ฝืน OFF บังคับ (เรียน/สอบ/Vacation) เด็ดขาด ทุกทางเลือกจะจัดตารางใหม่และให้ Validator ตรวจซ้ำ</p>
+    <div class="repair-actions">
+      ${button('REFRESH_EXACT','จัดใหม่โดยไม่ผ่อนเงื่อนไข')}
+      ${button('ALLOW_REQUESTED_OFF','ยอมผ่อน: เลี่ยง → ขอ Off')}
+      ${button('ALLOW_LONG_888','ยอม 8-เว้น-8 เกิน 3 เวร')}
+      ${button('REDUCE_WEEKDAY_MORNING','ลดคนเช้าวันธรรมดาบางวัน')}
+      ${active.length?button('RESET_RELAXATIONS','ยกเลิกทางผ่อนทั้งหมด'):''}
+    </div>
+    ${active.length?`<div class="relaxation-strip"><b>ทางผ่อนที่กำลังใช้อยู่:</b> ${escapeHtml(active.join(' • '))}</div>`:''}
+  </div>`;
+}
 function renderAiAuditResult(data){
+  lastAuditData=data;
   const panel=byId('aiAuditPanel'),status=byId('aiAuditStatus'),content=byId('aiAuditContent'),audit=data.audit;
   panel.hidden=false;
   const quality=(audit.qualityStatus||audit.status||'FAIL').toLowerCase();
@@ -1139,11 +1385,40 @@ function renderAiAuditResult(data){
   const hard=audit.hardViolations||[],soft=audit.softViolations||[];
   content.innerHTML=`
     <div class="ai-audit-grid">
-      <div class="ai-audit-box"><h4>Hard violations (${hard.length})</h4>${hard.length?hard.map(x=>auditViolationHtml(x,'hard')).join(''):'<p class="hint">ไม่พบ Hard violation</p>'}</div>
-      <div class="ai-audit-box"><h4>Soft violations (${soft.length})</h4>${soft.length?soft.map(x=>auditViolationHtml(x,'soft')).join(''):'<p class="hint">ไม่พบ Soft violation</p>'}</div>
+      <div class="ai-audit-box"><h4>ข้อผิดพลาดบังคับ (${hard.length})</h4>${auditGroupHtml(hard,'hard')}</div>
+      <div class="ai-audit-box"><h4>ข้อที่ควรพิจารณา (${soft.length})</h4>${auditGroupHtml(soft,'soft')}</div>
     </div>
-    <div class="ai-explanation"><strong>คำอธิบายจาก AI</strong><br>${escapeHtml(data.aiExplanation||'ไม่มีคำอธิบายจาก AI')}</div>`;
+    <div class="ai-explanation"><strong>คำอธิบายจาก AI</strong><br>${escapeHtml(data.aiExplanation||'ไม่มีคำอธิบายจาก AI')}</div>
+    ${hard.length?repairPanelHtml(data.aiRecommendedAction||'NONE'):''}`;
   panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function parseReducedMorningDates(){
+  const current=(activeRelaxations().weekdayMorningReducedDates||[]).map(x=>parseISO(x).getDate()).join(',');
+  const raw=prompt('ระบุเลขวันที่วันทำการที่ยอมให้เวรเช้าลดลง 1 คน เช่น 3, 10, 17',current);
+  if(raw===null)return null;
+  const dates=[...new Set(String(raw).split(/[^0-9]+/).filter(Boolean).map(Number))]
+    .filter(day=>day>=1&&day<=daysInMonth(state.year,state.month))
+    .map(day=>isoDate(state.year,state.month,day))
+    .filter(date=>isWeekday(date)&&!isPublicHoliday(date));
+  if(!dates.length){toast('ไม่พบวันที่วันทำการที่ใช้ได้');return null;}
+  return dates;
+}
+async function applyRepairAction(action){
+  if(action==='REFRESH_EXACT'){createSnapshot('ก่อน Refresh ตาราง',{silent:true,recovery:true});await generateScheduleExact();return;}
+  if(action==='RESET_RELAXATIONS'){
+    state.settings.solverRelaxations={allowRequestedOffBreak:false,allowLong888:false,weekdayMorningReducedDates:[]};
+    saveState(false);toast('ยกเลิกทางผ่อนทั้งหมดแล้ว');await generateScheduleExact();return;
+  }
+  if(action==='ALLOW_REQUESTED_OFF')state.settings.solverRelaxations.allowRequestedOffBreak=true;
+  if(action==='ALLOW_LONG_888')state.settings.solverRelaxations.allowLong888=true;
+  if(action==='REDUCE_WEEKDAY_MORNING'){
+    const dates=parseReducedMorningDates();if(!dates)return;
+    state.settings.solverRelaxations.weekdayMorningReducedDates=dates;
+  }
+  createSnapshot('ก่อนใช้ทางผ่อนเงื่อนไข',{silent:true,recovery:true});
+  saveState(false);
+  await generateScheduleExact();
 }
 
 async function runAiScheduleAudit(){
@@ -1209,7 +1484,7 @@ function saveManualAssignment(e){
 function recomputeSchedule(s){const stats=createTrialStats(people());for(const a of s.assignments){const p=getPerson(a.personId);if(p)assignToTrial(p,a,stats,[]);}const wb=buildWeekendBlocks();const ev=evaluateTrial(s.assignments,s.unfilled,stats,s.slots,wb);s.stats=stats;s.score=ev.score;s.issues=ev.issues;}
 
 function globalClickHandler(e){
-  const t=e.target.closest('[data-edit-person],[data-delete-person],[data-select-condition-person],[data-remove-condition],[data-remove-holiday],[data-remove-staff-special],[data-edit-assignment],[data-fill-slot],[data-load-snapshot],[data-delete-snapshot]');if(!t)return;
+  const t=e.target.closest('[data-edit-person],[data-delete-person],[data-select-condition-person],[data-remove-condition],[data-remove-holiday],[data-remove-staff-special],[data-edit-assignment],[data-fill-slot],[data-load-snapshot],[data-delete-snapshot],[data-repair-action]');if(!t)return;
   if(t.dataset.editPerson)openPersonDialog(getPerson(t.dataset.editPerson));
   if(t.dataset.deletePerson)deletePerson(t.dataset.deletePerson);
   if(t.dataset.selectConditionPerson){state.selectedConditionPerson[state.mode]=t.dataset.selectConditionPerson;state.parsedCondition=null;renderConditionUI();saveState(false);}
@@ -1220,6 +1495,7 @@ function globalClickHandler(e){
   if(t.dataset.fillSlot)openAssignmentDialog(t.dataset.fillSlot,true);
   if(t.dataset.loadSnapshot)loadSnapshot(t.dataset.loadSnapshot);
   if(t.dataset.deleteSnapshot)deleteSnapshot(t.dataset.deleteSnapshot);
+  if(t.dataset.repairAction)applyRepairAction(t.dataset.repairAction);
 }
 
 function importJson(e){
@@ -1311,8 +1587,9 @@ function excelConditionLines(date,currentSchedule){
   for(const person of sortedPeople){
     ensurePersonConditions(person);
     const types=[
-      ['off','off'],
-      ['avoid','ไม่ prefer'],
+      ['hardOff','OFF บังคับ'],
+      ['off','ขอ off'],
+      ['avoid','เลี่ยง'],
       ['request','ขออยู่']
     ];
     for(const [type,label] of types){
@@ -1500,7 +1777,8 @@ async function exportExcel(){
       const startRowIndex=(firstDayRow-1)+(dateIndex*rowsPerDay);
       const parsed=parseISO(date);
       const isGovernmentHoliday=publicHolidays.has(date);
-      const dateFill=isGovernmentHoliday?'FCE8E6':parsed.getDay()===3?'E2F0D9':'FFFFFF';
+      const isSaturdayOrSunday=parsed.getDay()===0||parsed.getDay()===6;
+      const dateFill=(isGovernmentHoliday||isSaturdayOrSunday)?'FCE8E6':parsed.getDay()===3?'E2F0D9':'FFFFFF';
 
       ensureCell(startRowIndex,0).s=excelCellStyle({fill:dateFill,bold:true,fontSize:11,wrap:true});
       ensureCell(startRowIndex,4).s=excelCellStyle({fill:'FFFFFF',fontSize:9,horizontal:'left',vertical:'top',wrap:true});
@@ -1525,7 +1803,7 @@ async function exportExcel(){
           if(person){
             const baseColor=personColor(person).replace('#','').toUpperCase();
             cell.s=excelCellStyle({
-              fill:mixHexColor(baseColor,'FFFFFF',.67),
+              fill:mixHexColor(baseColor,'FFFFFF',.38),
               fontColor:'17323B',
               bold:assignment.role==='Chief',
               borderColor:baseColor
@@ -1541,7 +1819,7 @@ async function exportExcel(){
     sortedSummaryPeople.forEach((person,index)=>{
       const row=2+index;
       const baseColor=personColor(person).replace('#','').toUpperCase();
-      const personFill=mixHexColor(baseColor,'FFFFFF',.67);
+      const personFill=mixHexColor(baseColor,'FFFFFF',.38);
       for(let column=6;column<=13;column++){
         ensureCell(row,column).s=excelCellStyle({
           fill:column===6?personFill:'FFFFFF',
