@@ -44,6 +44,19 @@
 .ai-audit-loading{display:flex;align-items:center;gap:10px;color:var(--muted)}
 @media(max-width:760px){.ai-audit-grid{grid-template-columns:1fr}}
 
+
+.autosave-status{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:12px;font-weight:800;white-space:nowrap}
+.autosave-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#22c55e}
+.autosave-status.saving{background:#fff7ed;color:#9a3412}.autosave-status.saving::before{background:#f59e0b}
+.autosave-status.error{background:#fef2f2;color:#b91c1c}.autosave-status.error::before{background:#ef4444}
+.saved-work-list{display:grid;gap:10px;max-height:55vh;overflow:auto;margin-top:12px}
+.saved-work-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 14px;border:1px solid #dbe7e8;border-radius:13px;background:#fbfefe}
+.saved-work-item h4{margin:0 0 4px;font-size:15px}.saved-work-item p{margin:0;color:#64777e;font-size:12px;line-height:1.5}
+.saved-work-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.saved-work-actions button{padding:8px 11px}
+.storage-warning{margin-top:10px;padding:10px 12px;border-radius:11px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.55}
+@media(max-width:980px){.autosave-status{order:10;width:100%;justify-content:center}.top-actions{flex-wrap:wrap}.saved-work-item{align-items:flex-start;flex-direction:column}.saved-work-actions{justify-content:flex-start}}
+
 </style>
 </head>
 <body>
@@ -57,7 +70,9 @@
         </div>
       </div>
       <div class="top-actions">
-        <button class="btn ghost" id="btnSave">บันทึกในเครื่อง</button>
+        <span class="autosave-status" id="autosaveStatus">กำลังเตรียมบันทึกอัตโนมัติ</span>
+        <button class="btn ghost" id="btnSave">บันทึกเวอร์ชัน</button>
+        <button class="btn ghost" id="btnSnapshots">งานที่บันทึก</button>
         <button class="btn ghost" id="btnExportJson">ส่งออกข้อมูล</button>
         <label class="btn ghost file-btn">นำเข้าข้อมูล<input id="importJson" type="file" accept="application/json" hidden /></label>
         <button class="btn danger-soft" id="btnReset">ล้างข้อมูล</button>
@@ -79,8 +94,8 @@
           <button class="nav-item" data-page="results"><span>6</span>ผลลัพธ์</button>
         </nav>
         <div class="sidebar-note">
-          <strong>ข้อมูลอยู่ในเครื่องนี้</strong>
-          <p>ข้อมูลเก็บในเครื่อง • Exact Solver ทำงานบนเซิร์ฟเวอร์ • หลังจัดเสร็จ Validator และ AI จะตรวจตารางซ้ำอัตโนมัติ</p>
+          <strong>บันทึกอัตโนมัติในเครื่องนี้</strong>
+          <p>ทุกการแก้ไขและผลจาก Exact Solver จะบันทึกทันที • Refresh แล้วกลับมาหน้าเดิม • ควรส่งออก JSON สำรองเมื่อตารางสำคัญ</p>
         </div>
       </aside>
 
@@ -242,7 +257,7 @@
         <section class="page" id="page-results">
           <div class="page-heading">
             <div><span class="eyebrow">STEP 6</span><h2>ตารางเวรและสรุปผล</h2><p>ดูได้ทั้งรายวัน รายบุคคล และสรุปจำนวนเวร</p></div>
-            <div class="button-row"><button class="btn primary" id="btnAiAudit">AI ตรวจสอบตาราง</button><button class="btn ghost" id="btnPrint">พิมพ์ / บันทึก PDF</button><button class="btn secondary" id="btnExportCsv">ดาวน์โหลด CSV</button></div>
+            <div class="button-row"><button class="btn primary" id="btnAiAudit">AI ตรวจสอบตาราง</button><button class="btn ghost" id="btnPrint">พิมพ์ / บันทึก PDF</button><button class="btn secondary" id="btnExportExcel">ดาวน์โหลด Excel</button><button class="btn secondary" id="btnExportCsv">ดาวน์โหลด CSV</button></div>
           </div>
           <div class="result-tabs"><button class="result-tab active" data-result="daily">ตารางรายวัน</button><button class="result-tab" data-result="personal">รายบุคคล</button><button class="result-tab" data-result="summary">สรุปโควตา</button><button class="result-tab" data-result="issues">ข้อเสนอแนะ</button></div>
           <section id="aiAuditPanel" class="ai-audit-panel" hidden>
@@ -290,9 +305,35 @@
     </form>
   </dialog>
 
+
+  <dialog id="savedWorkDialog" class="dialog">
+    <form method="dialog">
+      <div class="dialog-head"><h3>งานที่บันทึก</h3><button value="cancel" class="icon-btn">×</button></div>
+      <p class="hint">ระบบบันทึกงานล่าสุดอัตโนมัติ และเก็บเวอร์ชันที่ตั้งชื่อได้สูงสุด 8 รายการใน Browser เครื่องนี้</p>
+      <div class="button-row" style="margin-top:12px">
+        <button type="button" class="btn primary" id="btnCreateSnapshot">+ บันทึกเวอร์ชันปัจจุบัน</button>
+        <button type="button" class="btn ghost" id="btnRestoreBackup">กู้คืนก่อนการแก้ไขล่าสุด</button>
+      </div>
+      <div id="savedWorkList" class="saved-work-list"></div>
+      <div class="storage-warning">ข้อมูลในเครื่องจะไม่ตามไปยังอุปกรณ์หรือ Browser อื่น และอาจหายหากล้างข้อมูลเว็บไซต์ จึงควรใช้ “ส่งออกข้อมูล” เป็นไฟล์ JSON สำรองด้วย</div>
+      <div class="dialog-actions"><button value="cancel" class="btn ghost">ปิด</button></div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" aria-live="polite"></div>
   <script>
 'use strict';
+
+
+const STORAGE_KEYS = {
+  state:'erDutyPlannerStateV1',
+  backup:'erDutyPlannerBackupV1',
+  snapshots:'erDutyPlannerSnapshotsV1',
+  view:'erDutyPlannerViewV1',
+  meta:'erDutyPlannerSaveMetaV1'
+};
+const MAX_SNAPSHOTS = 8;
+
 
 const MONTHS_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const DAYS_TH = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
@@ -349,7 +390,7 @@ function defaultPeople(mode){
 function defaultState(){
   const now=new Date();
   return {
-    version:3, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
+    version:5, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
     settings:{
       residentCaps:{R1:24,R2:23,R3:22,outBkk:7},
       residentReq:{M:{min:1,target:2,max:2,chief:true},E:{min:1,target:2,max:2,chief:true},N:{min:1,target:2,max:2,chief:true}},
@@ -377,15 +418,23 @@ let conditionPaintAction='apply';
 let conditionPaintVisited=new Set();
 
 function loadState(){
-  try{
-    const raw=localStorage.getItem('erDutyPlannerStateV1');
-    if(raw){ const parsed=JSON.parse(raw); return migrateState(parsed); }
-  }catch(err){ console.warn(err); }
+  for(const key of [STORAGE_KEYS.state,STORAGE_KEYS.backup]){
+    try{
+      const raw=localStorage.getItem(key);
+      if(raw){
+        const parsed=JSON.parse(raw);
+        if(key===STORAGE_KEYS.backup){
+          queueMicrotask(()=>toast('กู้คืนข้อมูลจากสำเนาสำรองอัตโนมัติ'));
+        }
+        return migrateState(parsed);
+      }
+    }catch(err){ console.warn(`อ่านข้อมูลจาก ${key} ไม่สำเร็จ`,err); }
+  }
   return defaultState();
 }
 function migrateState(s){
   const d=defaultState();
-  const oldVersion=Number(s.version||1);const migrated={...d,...s,version:3,settings:{...d.settings,...(s.settings||{}),residentCaps:{...d.settings.residentCaps,...(s.settings?.residentCaps||{})},residentReq:{...d.settings.residentReq,...(s.settings?.residentReq||{})}},people:{resident:s.people?.resident||d.people.resident,staff:s.people?.staff||d.people.staff},schedules:oldVersion<2?{resident:null,staff:null}:{resident:s.schedules?.resident||null,staff:s.schedules?.staff||null},staffSpecials:Array.isArray(s.staffSpecials)?s.staffSpecials:[]};
+  const oldVersion=Number(s.version||1);const migrated={...d,...s,version:5,settings:{...d.settings,...(s.settings||{}),residentCaps:{...d.settings.residentCaps,...(s.settings?.residentCaps||{})},residentReq:{...d.settings.residentReq,...(s.settings?.residentReq||{})}},people:{resident:s.people?.resident||d.people.resident,staff:s.people?.staff||d.people.staff},schedules:oldVersion<2?{resident:null,staff:null}:{resident:s.schedules?.resident||null,staff:s.schedules?.staff||null},staffSpecials:Array.isArray(s.staffSpecials)?s.staffSpecials:[]};
   for(const mode of ['resident','staff']) for(const p of migrated.people[mode]) ensurePersonConditions(p);
   migrated.staffSpecials=migrated.staffSpecials.map(x=>({...x,count:clamp(Number(x.count??(x.staff2?2:1))||1,1,2),activity:!!x.activity}));
   return migrated;
@@ -400,7 +449,129 @@ function ensurePersonConditions(p){
   if(!Object.prototype.hasOwnProperty.call(p,'minTotalDuty'))p.minTotalDuty=null;
   return p.conditions;
 }
-function saveState(show=true){ localStorage.setItem('erDutyPlannerStateV1',JSON.stringify(state)); if(show) toast('บันทึกข้อมูลในเครื่องแล้ว'); }
+function saveState(show=true){
+  const status=byId('autosaveStatus');
+  try{
+    if(status){status.className='autosave-status saving';status.textContent='กำลังบันทึก…';}
+    const serialized=JSON.stringify(state);
+    const previous=localStorage.getItem(STORAGE_KEYS.state);
+    if(previous&&previous!==serialized)localStorage.setItem(STORAGE_KEYS.backup,previous);
+    localStorage.setItem(STORAGE_KEYS.state,serialized);
+    const savedAt=new Date().toISOString();
+    localStorage.setItem(STORAGE_KEYS.meta,JSON.stringify({savedAt,mode:state.mode,year:state.year,month:state.month}));
+    saveViewState();
+    updateAutosaveStatus(savedAt);
+    if(show)toast('บันทึกงานล่าสุดในเครื่องแล้ว');
+    return true;
+  }catch(error){
+    console.error('บันทึกข้อมูลไม่สำเร็จ',error);
+    if(status){status.className='autosave-status error';status.textContent='บันทึกไม่สำเร็จ — ส่งออก JSON';}
+    if(show)alert('Browser บันทึกข้อมูลไม่สำเร็จ กรุณากด “ส่งออกข้อมูล” เพื่อสำรองไฟล์ JSON');
+    return false;
+  }
+}
+function saveViewState(){
+  try{
+    localStorage.setItem(STORAGE_KEYS.view,JSON.stringify({currentPage,currentResult,mode:state.mode}));
+  }catch(error){console.warn('บันทึกตำแหน่งหน้าจอไม่สำเร็จ',error);}
+}
+function restoreViewState(){
+  try{
+    const view=JSON.parse(localStorage.getItem(STORAGE_KEYS.view)||'null');
+    const pages=['setup','people','conditions','holidays','generate','results'];
+    const results=['daily','personal','summary','issues'];
+    if(view&&pages.includes(view.currentPage))currentPage=view.currentPage;
+    if(view&&results.includes(view.currentResult))currentResult=view.currentResult;
+  }catch(error){console.warn('อ่านตำแหน่งหน้าจอไม่สำเร็จ',error);}
+}
+function updateAutosaveStatus(savedAt){
+  const status=byId('autosaveStatus');if(!status)return;
+  const date=savedAt?new Date(savedAt):null;
+  const valid=date&&!Number.isNaN(date.getTime());
+  status.className='autosave-status';
+  status.textContent=valid?`บันทึกอัตโนมัติแล้ว ${date.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}`:'พร้อมบันทึกอัตโนมัติ';
+}
+function loadSaveMeta(){
+  try{return JSON.parse(localStorage.getItem(STORAGE_KEYS.meta)||'null');}catch{return null;}
+}
+function getSnapshots(){
+  try{
+    const list=JSON.parse(localStorage.getItem(STORAGE_KEYS.snapshots)||'[]');
+    return Array.isArray(list)?list:[];
+  }catch{return [];}
+}
+function setSnapshots(list){
+  localStorage.setItem(STORAGE_KEYS.snapshots,JSON.stringify(list.slice(0,MAX_SNAPSHOTS)));
+}
+function snapshotDefaultName(){
+  return `${state.mode==='resident'?'Resident':'Staff'} ${MONTHS_TH[state.month]} ${state.year+543} — ${new Date().toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}`;
+}
+function createSnapshot(name=null,{silent=false,recovery=false}={}){
+  const snapshotName=(name||snapshotDefaultName()).trim();
+  if(!snapshotName)return false;
+  try{
+    const list=getSnapshots();
+    list.unshift({
+      id:uid('snap'),name:snapshotName,createdAt:new Date().toISOString(),
+      mode:state.mode,year:state.year,month:state.month,recovery,
+      view:{currentPage,currentResult},state:deepClone(state)
+    });
+    setSnapshots(list);
+    renderSavedWorkList();
+    if(!silent)toast('บันทึกเวอร์ชันแล้ว');
+    return true;
+  }catch(error){
+    console.error(error);
+    if(!silent)alert('บันทึกเวอร์ชันไม่สำเร็จ กรุณาส่งออก JSON แทน');
+    return false;
+  }
+}
+function createNamedSnapshot(){
+  const name=prompt('ตั้งชื่อเวอร์ชันที่ต้องการบันทึก',snapshotDefaultName());
+  if(name===null)return;
+  createSnapshot(name);
+}
+function renderSavedWorkList(){
+  const container=byId('savedWorkList');if(!container)return;
+  const list=getSnapshots();
+  container.innerHTML=list.length?list.map(item=>{
+    const date=new Date(item.createdAt);
+    const scheduleState=item.state?.schedules?.[item.mode];
+    const scheduleText=scheduleState?`มีตาราง ${scheduleState.assignments?.length||0} ตำแหน่ง`:'ยังไม่มีตาราง';
+    return `<div class="saved-work-item">
+      <div><h4>${escapeHtml(item.name)}</h4><p>${item.mode==='resident'?'Resident':'Staff'} • ${MONTHS_TH[item.month]} ${item.year+543} • ${scheduleText}<br>${date.toLocaleString('th-TH')}</p></div>
+      <div class="saved-work-actions">
+        <button type="button" class="btn primary" data-load-snapshot="${item.id}">เปิดงานนี้</button>
+        <button type="button" class="btn danger-soft" data-delete-snapshot="${item.id}">ลบ</button>
+      </div>
+    </div>`;
+  }).join(''):'<div class="alert warning">ยังไม่มีเวอร์ชันที่ตั้งชื่อไว้ ระบบยังคงบันทึกงานล่าสุดอัตโนมัติอยู่</div>';
+}
+function openSavedWorkDialog(){renderSavedWorkList();byId('savedWorkDialog').showModal();}
+function loadSnapshot(id){
+  const item=getSnapshots().find(x=>x.id===id);if(!item)return;
+  if(!confirm(`เปิด “${item.name}” และแทนที่งานปัจจุบันหรือไม่?`))return;
+  createSnapshot(`กู้คืนอัตโนมัติก่อนเปิด ${item.name}`,{silent:true,recovery:true});
+  state=migrateState(deepClone(item.state));
+  currentPage=item.view?.currentPage||'setup';currentResult=item.view?.currentResult||'daily';
+  holidayRevision++;syncControlsFromState();ensureSelectedPerson();renderAll();showPage(currentPage);showResult(currentResult);saveState(false);
+  byId('savedWorkDialog').close();toast('เปิดงานที่บันทึกแล้ว');
+}
+function deleteSnapshot(id){
+  const item=getSnapshots().find(x=>x.id===id);if(!item)return;
+  if(!confirm(`ลบเวอร์ชัน “${item.name}” หรือไม่?`))return;
+  setSnapshots(getSnapshots().filter(x=>x.id!==id));renderSavedWorkList();toast('ลบเวอร์ชันแล้ว');
+}
+function restoreBackup(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEYS.backup);
+    if(!raw){toast('ยังไม่มีสำเนาก่อนการแก้ไข');return;}
+    if(!confirm('กู้คืนสถานะก่อนการแก้ไขล่าสุด และแทนที่งานปัจจุบันหรือไม่?'))return;
+    createSnapshot('กู้คืนอัตโนมัติก่อนเปิดสำเนาก่อนหน้า',{silent:true,recovery:true});
+    state=migrateState(JSON.parse(raw));holidayRevision++;syncControlsFromState();ensureSelectedPerson();renderAll();showPage(currentPage);showResult(currentResult);saveState(false);
+    byId('savedWorkDialog').close();toast('กู้คืนสำเนาก่อนหน้าแล้ว');
+  }catch(error){alert('สำเนาก่อนหน้าเสียหายหรือเปิดไม่ได้');}
+}
 function people(){ return state.people[state.mode]; }
 function schedule(){ return state.schedules[state.mode]; }
 function monthDates(){ return Array.from({length:daysInMonth(state.year,state.month)},(_,i)=>isoDate(state.year,state.month,i+1)); }
@@ -440,7 +611,9 @@ function getPerson(id){ return people().find(p=>p.id===id); }
 function conditionShiftOptions(){ return state.mode==='resident' ? ['M','E','N'] : ['M1','M2','E','N','OC']; }
 
 function init(){
-  populateMonth(); bindEvents(); syncControlsFromState(); ensureSelectedPerson(); renderAll();
+  populateMonth();bindEvents();restoreViewState();syncControlsFromState();ensureSelectedPerson();renderAll();showPage(currentPage);showResult(currentResult);
+  const meta=loadSaveMeta();updateAutosaveStatus(meta?.savedAt);
+  if(!localStorage.getItem(STORAGE_KEYS.state))saveState(false);
 }
 
 function populateMonth(){
@@ -455,8 +628,11 @@ function bindEvents(){
   byId('yearInput').addEventListener('change',e=>{state.year=clamp(Number(e.target.value)||new Date().getFullYear(),2020,2100);invalidateSchedule();ensureDatesInMonth();renderAll();saveState(false)});
   ['capR1','capR2','capR3','capOutBkk','resMMin','resMTarget','resMMax','resEMin','resETarget','resEMax','resNMin','resNTarget','resNMax','staffMorningBase','staffOnCallCount','staffConsecutivePolicy'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
   ['resMChief','resEChief','resNChief','noAdjacent','avoid888','r1WedOff','strictRequests'].forEach(id=>byId(id).addEventListener('change',readSettingsFromControls));
-  byId('btnSave').addEventListener('click',()=>saveState(true));
-  byId('btnReset').addEventListener('click',()=>{if(confirm('ล้างข้อมูลทั้งหมดและกลับค่าเริ่มต้น?')){state=defaultState();holidayRevision++;saveState(false);syncControlsFromState();renderAll();toast('ล้างข้อมูลแล้ว')}});
+  byId('btnSave').addEventListener('click',createNamedSnapshot);
+  byId('btnSnapshots').addEventListener('click',openSavedWorkDialog);
+  byId('btnCreateSnapshot').addEventListener('click',createNamedSnapshot);
+  byId('btnRestoreBackup').addEventListener('click',restoreBackup);
+  byId('btnReset').addEventListener('click',()=>{if(confirm('ล้างข้อมูลทั้งหมดและกลับค่าเริ่มต้น?')){createSnapshot('สำรองอัตโนมัติก่อนล้างข้อมูล',{silent:true,recovery:true});state=defaultState();currentPage='setup';currentResult='daily';holidayRevision++;saveState(false);syncControlsFromState();renderAll();showPage('setup');toast('ล้างข้อมูลแล้ว — เก็บสำรองก่อนล้างไว้ในงานที่บันทึก')}});
   byId('btnExportJson').addEventListener('click',()=>downloadBlob(JSON.stringify(state,null,2),`ER-duty-planner-${state.year}-${pad(state.month+1)}.json`,'application/json'));
   byId('importJson').addEventListener('change',importJson);
   byId('btnAddPerson').addEventListener('click',()=>openPersonDialog());
@@ -476,10 +652,13 @@ function bindEvents(){
   byId('btnGenerate').addEventListener('click',generateScheduleExact);
   byId('btnAiAudit').addEventListener('click',runAiScheduleAudit);
   byId('personalSelect').addEventListener('change',renderPersonalSchedule);
+  byId('btnExportExcel').addEventListener('click',exportExcel);
   byId('btnExportCsv').addEventListener('click',exportCsv);
   byId('btnPrint').addEventListener('click',()=>window.print());
   byId('btnSaveAssignment').addEventListener('click',saveManualAssignment);
   document.addEventListener('click',globalClickHandler);
+  window.addEventListener('beforeunload',()=>saveState(false));
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveState(false);});
 }
 function byId(id){ return document.getElementById(id); }
 function syncControlsFromState(){
@@ -501,8 +680,8 @@ function readSettingsFromControls(){
   invalidateSchedule();renderAll();saveState(false);
 }
 function switchMode(mode){ state.mode=mode; ensureSelectedPerson(); document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode)); syncModeVisibility(); renderAll();saveState(false); }
-function showPage(page){ currentPage=page;document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===`page-${page}`));document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='generate')renderGeneratePage();if(page==='results')renderResults(); }
-function showResult(result){ currentResult=result;document.querySelectorAll('.result-tab').forEach(b=>b.classList.toggle('active',b.dataset.result===result));document.querySelectorAll('.result-panel').forEach(p=>p.classList.toggle('active',p.id===`result-${result}`));if(result==='personal')renderPersonalSchedule(); }
+function showPage(page){ currentPage=page;document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===`page-${page}`));document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='generate')renderGeneratePage();if(page==='results')renderResults();saveViewState(); }
+function showResult(result){ currentResult=result;document.querySelectorAll('.result-tab').forEach(b=>b.classList.toggle('active',b.dataset.result===result));document.querySelectorAll('.result-panel').forEach(p=>p.classList.toggle('active',p.id===`result-${result}`));if(result==='personal')renderPersonalSchedule();saveViewState(); }
 function syncModeVisibility(){
   const staff=state.mode==='staff';
   byId('residentCapsCard').hidden=staff;byId('residentReqCard').hidden=staff;byId('staffRuleCard').hidden=!staff;byId('r1WedWrap').hidden=staff;byId('staffSpecialCard').hidden=!staff;byId('staff2Legend').hidden=!staff;byId('activityLegend').hidden=!staff;byId('levelWrap').hidden=staff;byId('chiefWrap').hidden=staff;byId('rotationWrap').hidden=staff;byId('dialogOnCallWrap').hidden=!staff;byId('onCallMaxWrap').hidden=!staff;byId('minTotalDutyWrap').hidden=!staff;byId('dialogMinTotalWrap').hidden=!staff;
@@ -1030,7 +1209,7 @@ function saveManualAssignment(e){
 function recomputeSchedule(s){const stats=createTrialStats(people());for(const a of s.assignments){const p=getPerson(a.personId);if(p)assignToTrial(p,a,stats,[]);}const wb=buildWeekendBlocks();const ev=evaluateTrial(s.assignments,s.unfilled,stats,s.slots,wb);s.stats=stats;s.score=ev.score;s.issues=ev.issues;}
 
 function globalClickHandler(e){
-  const t=e.target.closest('[data-edit-person],[data-delete-person],[data-select-condition-person],[data-remove-condition],[data-remove-holiday],[data-remove-staff-special],[data-edit-assignment],[data-fill-slot]');if(!t)return;
+  const t=e.target.closest('[data-edit-person],[data-delete-person],[data-select-condition-person],[data-remove-condition],[data-remove-holiday],[data-remove-staff-special],[data-edit-assignment],[data-fill-slot],[data-load-snapshot],[data-delete-snapshot]');if(!t)return;
   if(t.dataset.editPerson)openPersonDialog(getPerson(t.dataset.editPerson));
   if(t.dataset.deletePerson)deletePerson(t.dataset.deletePerson);
   if(t.dataset.selectConditionPerson){state.selectedConditionPerson[state.mode]=t.dataset.selectConditionPerson;state.parsedCondition=null;renderConditionUI();saveState(false);}
@@ -1039,11 +1218,358 @@ function globalClickHandler(e){
   if(t.dataset.removeStaffSpecial){state.staffSpecials=state.staffSpecials.filter(x=>x.id!==t.dataset.removeStaffSpecial);invalidateSchedule();saveState(false);renderAll();}
   if(t.dataset.editAssignment)openAssignmentDialog(t.dataset.editAssignment,false);
   if(t.dataset.fillSlot)openAssignmentDialog(t.dataset.fillSlot,true);
+  if(t.dataset.loadSnapshot)loadSnapshot(t.dataset.loadSnapshot);
+  if(t.dataset.deleteSnapshot)deleteSnapshot(t.dataset.deleteSnapshot);
 }
 
 function importJson(e){
-  const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{state=migrateState(JSON.parse(reader.result));holidayRevision++;syncControlsFromState();ensureSelectedPerson();renderAll();saveState(false);toast('นำเข้าข้อมูลแล้ว');}catch(err){alert('ไฟล์ข้อมูลไม่ถูกต้อง');}e.target.value='';};reader.readAsText(file);
+  const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{createSnapshot('สำรองอัตโนมัติก่อนนำเข้าข้อมูล',{silent:true,recovery:true});state=migrateState(JSON.parse(reader.result));holidayRevision++;syncControlsFromState();ensureSelectedPerson();renderAll();saveState(false);toast('นำเข้าข้อมูลแล้ว');}catch(err){alert('ไฟล์ข้อมูลไม่ถูกต้อง');}e.target.value='';};reader.readAsText(file);
 }
+
+function loadExternalScript(src){
+  return new Promise((resolve,reject)=>{
+    const existing=[...document.scripts].find(s=>s.src===src);
+    if(existing){
+      if(window.XLSX)return resolve();
+      existing.addEventListener('load',resolve,{once:true});
+      existing.addEventListener('error',()=>reject(new Error(`โหลด ${src} ไม่สำเร็จ`)),{once:true});
+      return;
+    }
+    const script=document.createElement('script');
+    script.src=src;script.async=true;
+    script.onload=resolve;
+    script.onerror=()=>reject(new Error(`โหลด ${src} ไม่สำเร็จ`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureExcelLibrary(){
+  if(window.XLSX)return window.XLSX;
+  const sources=[
+    'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
+    'https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js'
+  ];
+  let lastError=null;
+  for(const src of sources){
+    try{
+      await loadExternalScript(src);
+      if(window.XLSX)return window.XLSX;
+    }catch(error){lastError=error;}
+  }
+  throw lastError||new Error('ไม่สามารถโหลดระบบสร้าง Excel ได้');
+}
+
+function mixHexColor(base='#64748b',target='#ffffff',targetWeight=.68){
+  const clean=value=>String(value||'').replace('#','').padEnd(6,'0').slice(0,6);
+  const a=clean(base),b=clean(target),w=clamp(Number(targetWeight)||0,0,1);
+  const channel=i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-w)+parseInt(b.slice(i,i+2),16)*w);
+  return [0,2,4].map(i=>channel(i).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+
+function excelLevelRank(person){
+  if(state.mode!=='resident')return 0;
+  return ({R3:3,R2:2,R1:1}[person?.level]||0);
+}
+
+function excelDisplayName(person,assignment){
+  const raw=String(person?.name||assignment?.personName||'ไม่พบรายชื่อ').trim();
+  const withLevel=state.mode==='resident'&&!/^R[123]\s/i.test(raw)&&person?.level?`${person.level} ${raw}`:raw;
+  return assignment?.role==='Chief'?`★ ${withLevel}`:withLevel;
+}
+
+function excelSortAssignments(items){
+  return [...items].sort((a,b)=>{
+    const pa=getPerson(a.personId),pb=getPerson(b.personId);
+    const levelDiff=excelLevelRank(pb)-excelLevelRank(pa);
+    if(levelDiff)return levelDiff;
+    const chiefDiff=(b.role==='Chief'?1:0)-(a.role==='Chief'?1:0);
+    if(chiefDiff)return chiefDiff;
+    return String(pa?.name||a.personName||'').localeCompare(String(pb?.name||b.personName||''),'th');
+  });
+}
+
+function excelConditionShiftText(shifts=[]){
+  const labels=[];
+  const add=label=>{if(!labels.includes(label))labels.push(label);};
+  for(const shift of shifts){
+    if(['M','M1','M2'].includes(shift))add('เช้า');
+    else if(shift==='E')add('บ่าย');
+    else if(shift==='N')add('ดึก');
+    else if(shift==='OC')add('On call');
+  }
+  if(state.mode==='resident'&&['เช้า','บ่าย','ดึก'].every(x=>labels.includes(x)))return 'ทั้งวัน';
+  if(state.mode==='staff'&&['เช้า','บ่าย','ดึก'].every(x=>labels.includes(x))&&!labels.includes('On call'))return 'ทั้งวัน';
+  if(state.mode==='staff'&&['เช้า','บ่าย','ดึก','On call'].every(x=>labels.includes(x)))return 'ทุกเวร';
+  return labels.join('/');
+}
+
+function excelConditionLines(date,currentSchedule){
+  const lines=[];
+  const sortedPeople=[...people()].sort((a,b)=>excelLevelRank(b)-excelLevelRank(a)||a.name.localeCompare(b.name,'th'));
+  const add=line=>{if(line&&!lines.includes(line))lines.push(line);};
+
+  for(const person of sortedPeople){
+    ensurePersonConditions(person);
+    const types=[
+      ['off','off'],
+      ['avoid','ไม่ prefer'],
+      ['request','ขออยู่']
+    ];
+    for(const [type,label] of types){
+      for(const condition of person.conditions[type]){
+        if(condition.date!==date)continue;
+        const shiftText=excelConditionShiftText(condition.shifts);
+        add(`${person.name} ${label}${shiftText?` ${shiftText}`:''}`);
+      }
+    }
+
+    const weekendStarts=currentSchedule?.weekendBlocks?.[person.id]||[];
+    for(const saturday of weekendStarts){
+      const blockedDates=[addDays(saturday,-1),saturday,addDays(saturday,1)];
+      if(blockedDates.includes(date))add(`${person.name} off weekend`);
+    }
+  }
+
+  if(state.mode==='resident'&&state.settings.r1WedOff&&parseISO(date).getDay()===3){
+    add('R1 Basic science — off เช้า');
+  }
+
+  if(state.mode==='staff'){
+    const special=state.staffSpecials.find(item=>item.date===date);
+    if(special?.activity)add('Activity — Staff 2 ถึง 10:00');
+    else if(staffMorningCount(date)===2)add('เวรเช้าใช้ Staff 2 คน');
+  }
+
+  return lines;
+}
+
+function excelCellStyle({fill='FFFFFF',fontColor='17323B',bold=false,fontSize=10,horizontal='center',vertical='center',wrap=true,borderColor='D7E1E3'}={}){
+  const side={style:'thin',color:{rgb:borderColor}};
+  return {
+    fill:{patternType:'solid',fgColor:{rgb:fill}},
+    font:{name:'Tahoma',sz:fontSize,bold,color:{rgb:fontColor}},
+    alignment:{horizontal,vertical,wrapText:wrap},
+    border:{top:side,bottom:side,left:side,right:side}
+  };
+}
+
+async function exportExcel(){
+  const currentSchedule=schedule();
+  if(!currentSchedule){toast('ยังไม่มีตารางเวร');return;}
+
+  const button=byId('btnExportExcel');
+  const oldText=button?.textContent||'ดาวน์โหลด Excel';
+  if(button){button.disabled=true;button.textContent='กำลังสร้าง Excel…';}
+
+  try{
+    const XLSX=await ensureExcelLibrary();
+    const dates=monthDates();
+    const primaryShiftGroups=state.mode==='resident'
+      ? {morning:['M'],evening:['E'],night:['N']}
+      : {morning:['M1','M2'],evening:['E'],night:['N']};
+
+    const maxNames=Math.max(
+      0,
+      ...dates.flatMap(date=>Object.values(primaryShiftGroups).map(shifts=>
+        currentSchedule.assignments.filter(a=>a.date===date&&shifts.includes(a.shift)).length+
+        currentSchedule.unfilled.filter(a=>a.date===date&&shifts.includes(a.shift)).length
+      ))
+    );
+    const rowsPerDay=Math.max(5,maxNames);
+    const firstDayRow=3;
+    const scheduleLastRow=firstDayRow+(dates.length*rowsPerDay)-1;
+    const summaryLastRow=3+people().length;
+    const totalRows=Math.max(scheduleLastRow,summaryLastRow);
+    const totalCols=14; // A:N
+    const matrix=Array.from({length:totalRows},()=>Array(totalCols).fill(''));
+
+    matrix[0][0]=`ตารางเวร ${state.mode==='resident'?'Resident':'Staff'} ประจำเดือน${MONTHS_TH[state.month]} ${state.year+543}`;
+    matrix[1][0]='วันที่';
+    matrix[1][1]='เวรเช้า';
+    matrix[1][2]='เวรบ่าย';
+    matrix[1][3]='เวรดึก';
+    matrix[1][4]='Condition / คำขอ OFF';
+
+    matrix[0][6]=`สรุปจำนวนเวร ${MONTHS_TH[state.month]} ${state.year+543}`;
+    const summaryHeaders=state.mode==='resident'
+      ? ['ชื่อ','ระดับ','เช้า','บ่าย','ดึก','รวม','วันหยุด','หมายเหตุ / การวน']
+      : ['ชื่อ','เช้า','บ่าย','ดึก','On call','รวมเวรจริง','วันหยุด','หมายเหตุ'];
+    summaryHeaders.forEach((value,index)=>matrix[1][6+index]=value);
+
+    const merges=[
+      {s:{r:0,c:0},e:{r:0,c:4}},
+      {s:{r:0,c:6},e:{r:0,c:13}}
+    ];
+
+    const fullDayNames=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+    const publicHolidays=holidayMap();
+
+    dates.forEach((date,dateIndex)=>{
+      const startRow=firstDayRow+(dateIndex*rowsPerDay); // 1-based
+      const rowIndex=startRow-1;
+      const parsed=parseISO(date);
+      const dayNumber=parsed.getDate();
+      const holidayName=publicHolidays.get(date)||'';
+      matrix[rowIndex][0]=`${dayNumber}\n${fullDayNames[parsed.getDay()]}${holidayName?`\n${holidayName}`:''}`;
+
+      const shiftColumns=[
+        [1,primaryShiftGroups.morning],
+        [2,primaryShiftGroups.evening],
+        [3,primaryShiftGroups.night]
+      ];
+
+      for(const [column,shifts] of shiftColumns){
+        const assigned=excelSortAssignments(currentSchedule.assignments.filter(a=>a.date===date&&shifts.includes(a.shift)));
+        const unfilled=currentSchedule.unfilled.filter(a=>a.date===date&&shifts.includes(a.shift));
+        assigned.forEach((assignment,index)=>{
+          if(index<rowsPerDay){
+            const person=getPerson(assignment.personId);
+            matrix[rowIndex+index][column]=excelDisplayName(person,assignment);
+          }
+        });
+        unfilled.forEach((slot,index)=>{
+          const target=assigned.length+index;
+          if(target<rowsPerDay)matrix[rowIndex+target][column]='ยังว่าง';
+        });
+      }
+
+      matrix[rowIndex][4]=excelConditionLines(date,currentSchedule).join('\n');
+      merges.push({s:{r:rowIndex,c:0},e:{r:rowIndex+rowsPerDay-1,c:0}});
+      merges.push({s:{r:rowIndex,c:4},e:{r:rowIndex+rowsPerDay-1,c:4}});
+    });
+
+    const sortedSummaryPeople=[...people()].sort((a,b)=>excelLevelRank(b)-excelLevelRank(a)||a.name.localeCompare(b.name,'th'));
+    sortedSummaryPeople.forEach((person,index)=>{
+      const row=2+index;
+      const personAssignments=currentSchedule.assignments.filter(a=>a.personId===person.id);
+      const morning=personAssignments.filter(a=>['M','M1','M2'].includes(a.shift)).length;
+      const evening=personAssignments.filter(a=>a.shift==='E').length;
+      const night=personAssignments.filter(a=>a.shift==='N').length;
+      const onCall=personAssignments.filter(a=>a.shift==='OC').length;
+      const actualTotal=morning+evening+night;
+      const holidayCount=personAssignments.filter(a=>!['OC'].includes(a.shift)&&isHoliday(a.date)).length;
+      const note=[ROTATION_LABELS[person.rotation]||person.rotation||'',person.note||''].filter(Boolean).join(' • ');
+
+      if(state.mode==='resident'){
+        matrix[row][6]=person.name;
+        matrix[row][7]=person.level||'';
+        matrix[row][8]=morning;
+        matrix[row][9]=evening;
+        matrix[row][10]=night;
+        matrix[row][11]=actualTotal;
+        matrix[row][12]=holidayCount;
+        matrix[row][13]=note;
+      }else{
+        matrix[row][6]=person.name;
+        matrix[row][7]=morning;
+        matrix[row][8]=evening;
+        matrix[row][9]=night;
+        matrix[row][10]=onCall;
+        matrix[row][11]=actualTotal;
+        matrix[row][12]=holidayCount;
+        matrix[row][13]=note;
+      }
+    });
+
+    const worksheet=XLSX.utils.aoa_to_sheet(matrix);
+    worksheet['!merges']=merges;
+    worksheet['!cols']=[
+      {wch:12},{wch:23},{wch:23},{wch:23},{wch:39},{wch:3},
+      {wch:24},{wch:10},{wch:9},{wch:9},{wch:9},{wch:10},{wch:10},{wch:38}
+    ];
+    worksheet['!rows']=Array.from({length:totalRows},(_,index)=>({hpt:index===0?29:index===1?24:19}));
+    worksheet['!margins']={left:.25,right:.25,top:.35,bottom:.35,header:.15,footer:.15};
+    worksheet['!pageSetup']={orientation:'landscape',fitToWidth:1,fitToHeight:0,paperSize:9};
+    worksheet['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:totalRows-1,c:totalCols-1}});
+
+    const ensureCell=(row,column)=>{
+      const address=XLSX.utils.encode_cell({r:row,c:column});
+      if(!worksheet[address])worksheet[address]={t:'s',v:''};
+      return worksheet[address];
+    };
+
+    // Titles and headers
+    ensureCell(0,0).s=excelCellStyle({fill:'FFFFFF',bold:true,fontSize:16,horizontal:'center',borderColor:'FFFFFF'});
+    ensureCell(0,6).s=excelCellStyle({fill:'FFFFFF',bold:true,fontSize:14,horizontal:'center',borderColor:'FFFFFF'});
+    for(let c=0;c<=3;c++)ensureCell(1,c).s=excelCellStyle({fill:'111827',fontColor:'FFFFFF',bold:true,fontSize:11});
+    ensureCell(1,4).s=excelCellStyle({fill:'F59E0B',fontColor:'FFFFFF',bold:true,fontSize:11});
+    for(let c=6;c<=13;c++)ensureCell(1,c).s=excelCellStyle({fill:'111827',fontColor:'FFFFFF',bold:true,fontSize:10});
+
+    // Day blocks
+    dates.forEach((date,dateIndex)=>{
+      const startRowIndex=(firstDayRow-1)+(dateIndex*rowsPerDay);
+      const parsed=parseISO(date);
+      const isGovernmentHoliday=publicHolidays.has(date);
+      const dateFill=isGovernmentHoliday?'FCE8E6':parsed.getDay()===3?'E2F0D9':'FFFFFF';
+
+      ensureCell(startRowIndex,0).s=excelCellStyle({fill:dateFill,bold:true,fontSize:11,wrap:true});
+      ensureCell(startRowIndex,4).s=excelCellStyle({fill:'FFFFFF',fontSize:9,horizontal:'left',vertical:'top',wrap:true});
+
+      for(let offset=0;offset<rowsPerDay;offset++){
+        for(let column=1;column<=3;column++){
+          const cell=ensureCell(startRowIndex+offset,column);
+          const value=String(cell.v||'');
+          if(value==='ยังว่าง'){
+            cell.s=excelCellStyle({fill:'FEE2E2',fontColor:'B91C1C',bold:true});
+            continue;
+          }
+
+          const assignment=currentSchedule.assignments.find(item=>{
+            if(item.date!==date)return false;
+            const group=column===1?primaryShiftGroups.morning:column===2?primaryShiftGroups.evening:primaryShiftGroups.night;
+            if(!group.includes(item.shift))return false;
+            const sorted=excelSortAssignments(currentSchedule.assignments.filter(a=>a.date===date&&group.includes(a.shift)));
+            return sorted[offset]?.key===item.key;
+          });
+          const person=assignment?getPerson(assignment.personId):null;
+          if(person){
+            const baseColor=personColor(person).replace('#','').toUpperCase();
+            cell.s=excelCellStyle({
+              fill:mixHexColor(baseColor,'FFFFFF',.67),
+              fontColor:'17323B',
+              bold:assignment.role==='Chief',
+              borderColor:baseColor
+            });
+          }else{
+            cell.s=excelCellStyle({fill:'FFFFFF'});
+          }
+        }
+      }
+    });
+
+    // Summary styles
+    sortedSummaryPeople.forEach((person,index)=>{
+      const row=2+index;
+      const baseColor=personColor(person).replace('#','').toUpperCase();
+      const personFill=mixHexColor(baseColor,'FFFFFF',.67);
+      for(let column=6;column<=13;column++){
+        ensureCell(row,column).s=excelCellStyle({
+          fill:column===6?personFill:'FFFFFF',
+          bold:column===6||column===11,
+          horizontal:column===13?'left':'center',
+          borderColor:column===6?baseColor:'D7E1E3'
+        });
+      }
+    });
+
+    const workbook=XLSX.utils.book_new();
+    workbook.Props={
+      Title:`ตารางเวร ${MONTHS_TH[state.month]} ${state.year+543}`,
+      Subject:'ER Duty Planner',
+      Author:'ER Duty Planner'
+    };
+    XLSX.utils.book_append_sheet(workbook,worksheet,'เวร');
+    const filename=`ตารางเวร-${state.mode}-${state.year+543}-${pad(state.month+1)}.xlsx`;
+    XLSX.writeFile(workbook,filename,{bookType:'xlsx',cellStyles:true,compression:true});
+    toast('ดาวน์โหลด Excel แล้ว');
+  }catch(error){
+    console.error('Excel export failed',error);
+    alert(`สร้างไฟล์ Excel ไม่สำเร็จ\n${error?.message||error}\n\nยังสามารถใช้ “ดาวน์โหลด CSV” หรือ “ส่งออกข้อมูล” สำรองได้`);
+  }finally{
+    if(button){button.disabled=false;button.textContent=oldText;}
+  }
+}
+
 function exportCsv(){
   const s=schedule();if(!s){toast('ยังไม่มีตารางเวร');return;}const rows=[['วันที่','วัน','ประเภทวัน','เวร','ตำแหน่ง','ชื่อ','ระดับ/ประเภท','หมายเหตุ']];
   for(const a of s.assignments){const p=getPerson(a.personId);rows.push([a.date,DAYS_TH[parseISO(a.date).getDay()],isHoliday(a.date)?'วันหยุด':'วันธรรมดา',SHIFT_LABELS[a.shift],a.role,p?.name||a.personName||'',state.mode==='resident'?(p?.level||''):'Staff',a.activity?'Activity: Staff 2 ถึง 10:00':'']);}
