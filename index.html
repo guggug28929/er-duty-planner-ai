@@ -480,8 +480,15 @@
                   <label>ต้องการ off สุดสัปดาห์กี่สัปดาห์<input id="weekendOffCount" type="number" min="0" max="5" /></label>
                   <label>เพดานเวรเฉพาะบุคคล<input id="personMaxOverride" type="number" min="0" placeholder="เว้นว่างเพื่อใช้ค่าตามระดับ" /></label>
                   <label id="onCallMaxWrap">เพดาน On call<input id="personOnCallMax" type="number" min="0" /></label>
-                  <label id="minTotalDutyWrap">ขั้นต่ำรวมเวรจริง + On call<input id="personMinTotalDuty" type="number" min="0" placeholder="ใช้ค่าเริ่มต้นวันทำการราชการ" /></label>
+                  <label id="minTotalDutyWrap">ขั้นต่ำรวมเวรจริง + On call (ถ้าต้องการ)<input id="personMinTotalDuty" type="number" min="0" placeholder="เว้นว่าง = ไม่กำหนดขั้นต่ำ" /></label>
                 </div>
+                <label class="toggle-row" id="staffWeekdayMorningOffWrap" hidden style="margin-top:14px">
+                  <input id="staffWeekdayMorningOff" type="checkbox">
+                  <span>
+                    <b>ขอ off เวรเช้าวันธรรมดาทุกวัน</b>
+                    <small>ลง “ขอ Off” ให้ทั้ง Staff 1 และ Staff 2 ทุกวันจันทร์–ศุกร์ที่ไม่ใช่วันหยุดราชการของเดือนนี้ • ผ่อนได้เฉพาะเมื่อผู้จัดเวรอนุญาต</small>
+                  </span>
+                </label>
                 <p class="hint">หนึ่งสุดสัปดาห์หมายถึง ศุกร์บ่าย–ดึก, เสาร์–อาทิตย์ทั้งวัน และเริ่มงานได้วันจันทร์เช้า</p>
               </article>
               <article class="card"><h3>เงื่อนไขที่บันทึกแล้ว</h3><div id="conditionList" class="condition-list"></div></article>
@@ -582,7 +589,7 @@
         <label class="span-2" id="rotationWrap">รูปแบบการวน<select id="personRotation"><option value="inside_all">วนในทั้งเดือน</option><option value="out_bkk_all">วนนอก กทม. ทั้งเดือน — วันทำการห้ามเช้า, prefer บ่าย</option><option value="out_province_all">วนนอก ตจว. ทั้งเดือน — ไม่อยู่เวร</option><option value="out_bkk_h1">วนนอก กทม. วันที่ 1–ครึ่งเดือน — วันทำการห้ามเช้า</option><option value="out_bkk_h2">วนนอก กทม. ครึ่งเดือนหลัง — วันทำการห้ามเช้า</option><option value="out_province_h1">วนนอก ตจว. วันที่ 1–ครึ่งเดือน</option><option value="out_province_h2">วนนอก ตจว. ครึ่งเดือนหลัง</option></select></label>
         <label>เพดานเวรเฉพาะบุคคล<input id="dialogMaxOverride" type="number" min="0" placeholder="ใช้ค่าตามระดับ" /></label>
         <label id="dialogOnCallWrap">เพดาน On call<input id="dialogOnCallMax" type="number" min="0" value="7" /></label>
-        <label id="dialogMinTotalWrap" class="span-2">ขั้นต่ำรวมเวรจริง + On call<input id="dialogMinTotalDuty" type="number" min="0" placeholder="ค่าเริ่มต้น = จำนวนวันทำการราชการของเดือน" /></label>
+        <label id="dialogMinTotalWrap" class="span-2">ขั้นต่ำรวมเวรจริง + On call (ถ้าต้องการ)<input id="dialogMinTotalDuty" type="number" min="0" placeholder="เว้นว่าง = ไม่กำหนดขั้นต่ำ" /></label>
         <label class="span-2">หมายเหตุ<input id="personNote" /></label>
       </div>
       <div class="dialog-actions"><button value="cancel" class="btn ghost">ยกเลิก</button><button value="default" class="btn primary" id="btnSavePerson">บันทึก</button></div>
@@ -670,7 +677,7 @@ function personColor(p){const list=state?.people?.[state.mode]||[];const idx=lis
 function personColorStyle(p){return `--person-color:${personColor(p)}`;}
 function personNameHtml(p){return `<span class="person-name-tag" style="${personColorStyle(p)}"><i></i><strong>${escapeHtml(p.name)}</strong></span>`;}
 function governmentWorkdayCount(){const key=`${state.year}-${state.month}-${holidayRevision}`;if(key!==workdayCacheKey){workdayCacheKey=key;const hm=holidayMap();workdayCacheValue=monthDates().filter(d=>isWeekday(d)&&!hm.has(d)).length;}return workdayCacheValue;}
-function staffMinTotal(p){if(p?.minTotalDuty!==null&&p?.minTotalDuty!==''&&!Number.isNaN(Number(p.minTotalDuty)))return Math.max(0,Number(p.minTotalDuty));return governmentWorkdayCount();}
+function staffMinTotal(p){if(p?.minTotalDuty!==null&&p?.minTotalDuty!==''&&!Number.isNaN(Number(p.minTotalDuty)))return Math.max(0,Number(p.minTotalDuty));return 0;}
 function staffActualCap(p){
   if(p?.maxOverride!==null&&p?.maxOverride!==''&&!Number.isNaN(Number(p.maxOverride)))return Math.max(0,Number(p.maxOverride));
   return Math.max(0,Number(state.settings.staffMaxDuty??20));
@@ -714,7 +721,7 @@ function defaultPeople(mode){
 function defaultState(){
   const now=new Date();
   return {
-    version:8, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
+    version:9, mode:'resident', year:now.getFullYear(), month:now.getMonth(),
     settings:{
       residentCaps:{R1:24,R2:23,R3:22,outBkk:7},
       residentReq:{M:{min:1,target:2,max:2,chief:true},E:{min:1,target:2,max:2,chief:true},N:{min:1,target:2,max:2,chief:true}},
@@ -765,7 +772,7 @@ function migrateState(s){
   const d=defaultState();
   const oldVersion=Number(s.version||1);
   const migrated={
-    ...d,...s,version:8,
+    ...d,...s,version:9,
     settings:{
       ...d.settings,...(s.settings||{}),
       residentCaps:{...d.settings.residentCaps,...(s.settings?.residentCaps||{})},
@@ -958,7 +965,7 @@ function halfCap(p,half){
 }
 function personCap(p){
   if(p.maxOverride!==null&&p.maxOverride!==''&&!Number.isNaN(Number(p.maxOverride)))return Number(p.maxOverride);
-  if(state.mode==='staff')return 999;
+  if(state.mode==='staff')return staffActualCap(p);
   return halfCap(p,1)+halfCap(p,2);
 }
 function getPerson(id){ return people().find(p=>p.id===id); }
@@ -1000,6 +1007,7 @@ function bindEvents(){
   byId('personMaxOverride').addEventListener('change',updatePersonOverviewConditions);
   byId('personOnCallMax').addEventListener('change',updatePersonOverviewConditions);
   byId('personMinTotalDuty').addEventListener('change',updatePersonOverviewConditions);
+  byId('staffWeekdayMorningOff').addEventListener('change',toggleStaffWeekdayMorningOff);
   byId('btnAddHoliday').addEventListener('click',addHoliday);
   byId('btnFetchHolidays').addEventListener('click',fetchThaiHolidays);
   byId('btnAddStaffSpecial').addEventListener('click',addStaffSpecial);
@@ -1061,7 +1069,7 @@ function syncModeVisibility(){
   byId('residentCapsCard').hidden=staff;byId('residentReqCard').hidden=staff;byId('staffRuleCard').hidden=!staff;byId('staffMorningDatesCard').hidden=!staff;
   byId('residentHolidayReqCard').hidden=staff||!state.settings.holidayStaffingDifferent;
   byId('staffHolidayReqCard').hidden=!staff||!state.settings.holidayStaffingDifferent;
-  byId('r1WedWrap').hidden=staff;byId('staffSpecialCard').hidden=!staff;byId('staff2Legend').hidden=!staff;byId('activityLegend').hidden=!staff;byId('levelWrap').hidden=staff;byId('chiefWrap').hidden=staff;byId('rotationWrap').hidden=staff;byId('dialogOnCallWrap').hidden=!staff;byId('onCallMaxWrap').hidden=!staff;byId('minTotalDutyWrap').hidden=!staff;byId('dialogMinTotalWrap').hidden=!staff;
+  byId('r1WedWrap').hidden=staff;byId('staffSpecialCard').hidden=!staff;byId('staff2Legend').hidden=!staff;byId('activityLegend').hidden=!staff;byId('levelWrap').hidden=staff;byId('chiefWrap').hidden=staff;byId('rotationWrap').hidden=staff;byId('dialogOnCallWrap').hidden=!staff;byId('onCallMaxWrap').hidden=!staff;byId('minTotalDutyWrap').hidden=!staff;byId('dialogMinTotalWrap').hidden=!staff;byId('staffWeekdayMorningOffWrap').hidden=!staff;
 }
 function invalidateSchedule(){ state.schedules[state.mode]=null; }
 function ensureDatesInMonth(){
@@ -1167,21 +1175,21 @@ function renderPeople(){
   const ps=people();
   const stats=state.mode==='resident'
     ? [['ทั้งหมด',ps.length],['R1',ps.filter(p=>p.level==='R1').length],['R2',ps.filter(p=>p.level==='R2').length],['R3',ps.filter(p=>p.level==='R3').length],['เป็น Chief ได้',ps.filter(p=>p.chiefEligible).length]]
-    : [['Staff ทั้งหมด',ps.length],['เพดานเริ่มต้น/คน',state.settings.staffMaxDuty??20],['วันทำการราชการ',governmentWorkdayCount()],['ตั้งเพดานเฉพาะคน',ps.filter(p=>p.maxOverride!==null&&p.maxOverride!=='').length]];
+    : [['Staff ทั้งหมด',ps.length],['เพดานเริ่มต้น/คน',state.settings.staffMaxDuty??20],['ตั้งเพดานเฉพาะคน',ps.filter(p=>p.maxOverride!==null&&p.maxOverride!=='').length],['ตั้งขั้นต่ำเฉพาะคน',ps.filter(p=>p.minTotalDuty!==null&&p.minTotalDuty!=='').length]];
   byId('peopleStats').innerHTML=stats.map(([t,n])=>`<div class="stat-chip"><b>${n}</b>${t}</div>`).join('');
   const thead=byId('peopleTable').querySelector('thead'), tbody=byId('peopleTable').querySelector('tbody');
   if(state.mode==='resident'){
     thead.innerHTML='<tr><th>ชื่อ</th><th>ระดับ</th><th>Chief</th><th>รูปแบบการวน</th><th>เพดานเวร</th><th>เงื่อนไข</th><th></th></tr>';
     tbody.innerHTML=ps.map(p=>`<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}${p.note?`<br><small>${escapeHtml(p.note)}</small>`:''}</td><td><span class="pill blue">${p.level}</span></td><td>${p.chiefEligible?'<span class="pill green">ได้</span>':'—'}</td><td>${escapeHtml(ROTATION_LABELS[p.rotation]||p.rotation)}</td><td>${personCap(p)} <small>(ครึ่งแรก ${halfCap(p,1)} / ครึ่งหลัง ${halfCap(p,2)})</small></td><td>${conditionCountText(p)}</td><td><div class="action-btns"><button class="icon-btn" data-edit-person="${p.id}" title="แก้ไข">✎</button><button class="icon-btn" data-delete-person="${p.id}" title="ลบ">×</button></div></td></tr>`).join('');
   }else{
-    thead.innerHTML='<tr><th>ชื่อ</th><th>ขั้นต่ำรวมเวร + On call</th><th>เพดานเวรจริง</th><th>เพดาน On call</th><th>เงื่อนไข</th><th>หมายเหตุ</th><th></th></tr>';
-    tbody.innerHTML=ps.map(p=>`<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}</td><td><strong>${staffMinTotal(p)}</strong>${p.minTotalDuty===null||p.minTotalDuty===''?'<br><small>ค่าเริ่มต้นตามวันทำการ</small>':''}</td><td><strong>${staffActualCap(p)}</strong>${p.maxOverride===null||p.maxOverride===''?'<br><small>ค่าเริ่มต้นจากหน้าแรก</small>':'<br><small>กำหนดเฉพาะบุคคล</small>'}</td><td>${p.onCallMax??'ไม่จำกัด'}</td><td>${conditionCountText(p)}</td><td>${escapeHtml(p.note||'—')}</td><td><div class="action-btns"><button class="icon-btn" data-edit-person="${p.id}">✎</button><button class="icon-btn" data-delete-person="${p.id}">×</button></div></td></tr>`).join('');
+    thead.innerHTML='<tr><th>ชื่อ</th><th>ขั้นต่ำรวม (ถ้ากำหนด)</th><th>เพดานเวรจริง</th><th>เพดาน On call</th><th>เงื่อนไข</th><th>หมายเหตุ</th><th></th></tr>';
+    tbody.innerHTML=ps.map(p=>`<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}</td><td>${staffMinTotal(p)>0?`<strong>${staffMinTotal(p)}</strong>`:'<span class="hint">ไม่กำหนด</span>'}</td><td><strong>${staffActualCap(p)}</strong>${p.maxOverride===null||p.maxOverride===''?'<br><small>ค่าเริ่มต้นจากหน้าแรก</small>':'<br><small>กำหนดเฉพาะบุคคล</small>'}</td><td>${p.onCallMax??'ไม่จำกัด'}</td><td>${conditionCountText(p)}</td><td>${escapeHtml(p.note||'—')}</td><td><div class="action-btns"><button class="icon-btn" data-edit-person="${p.id}">✎</button><button class="icon-btn" data-delete-person="${p.id}">×</button></div></td></tr>`).join('');
   }
 }
-function conditionCountText(p){ ensurePersonConditions(p);const n=['off','avoid','request'].reduce((sum,type)=>sum+p.conditions[type].reduce((a,c)=>a+c.shifts.length,0),0); return n?`${n} ช่อง${p.conditions.weekendOffCount?` • off weekend ${p.conditions.weekendOffCount}`:''}`:(p.conditions.weekendOffCount?`off weekend ${p.conditions.weekendOffCount}`:'—'); }
+function conditionCountText(p){ ensurePersonConditions(p);const n=['hardOff','off','avoid','request'].reduce((sum,type)=>sum+p.conditions[type].reduce((a,c)=>a+c.shifts.length,0),0); return n?`${n} ช่อง${p.conditions.weekendOffCount?` • off weekend ${p.conditions.weekendOffCount}`:''}`:(p.conditions.weekendOffCount?`off weekend ${p.conditions.weekendOffCount}`:'—'); }
 function openPersonDialog(p=null){
   byId('personDialogTitle').textContent=p?'แก้ไขบุคลากร':'เพิ่มบุคลากร';
-  byId('personId').value=p?.id||'';byId('personName').value=p?.name||'';byId('personLevel').value=p?.level||'R1';byId('personChief').checked=!!p?.chiefEligible;byId('personRotation').value=p?.rotation||'inside_all';byId('dialogMaxOverride').value=p?.maxOverride??'';byId('dialogMaxOverride').placeholder=state.mode==='staff'?`เว้นว่าง = ${state.settings.staffMaxDuty??20} เวร`:'ใช้ค่าตามระดับ';byId('dialogOnCallMax').value=p?.onCallMax??7;byId('dialogMinTotalDuty').value=p?.minTotalDuty??'';byId('dialogMinTotalDuty').placeholder=`ค่าเริ่มต้นเดือนนี้ = ${governmentWorkdayCount()} เวร`;byId('personNote').value=p?.note||'';
+  byId('personId').value=p?.id||'';byId('personName').value=p?.name||'';byId('personLevel').value=p?.level||'R1';byId('personChief').checked=!!p?.chiefEligible;byId('personRotation').value=p?.rotation||'inside_all';byId('dialogMaxOverride').value=p?.maxOverride??'';byId('dialogMaxOverride').placeholder=state.mode==='staff'?`เว้นว่าง = ${state.settings.staffMaxDuty??20} เวร`:'ใช้ค่าตามระดับ';byId('dialogOnCallMax').value=p?.onCallMax??7;byId('dialogMinTotalDuty').value=p?.minTotalDuty??'';byId('dialogMinTotalDuty').placeholder='เว้นว่าง = ไม่กำหนดขั้นต่ำ';byId('personNote').value=p?.note||'';
   byId('personDialog').showModal();
 }
 function savePersonFromDialog(e){
@@ -1197,11 +1205,11 @@ function ensureSelectedPerson(){ const ps=people(); const key=state.mode; if(!ps
 function selectedConditionPerson(){ return getPerson(state.selectedConditionPerson[state.mode]); }
 function renderConditionUI(){
   ensureSelectedPerson(); const p=selectedConditionPerson();
-  byId('conditionPersonList').innerHTML=people().length?people().map(x=>`<button class="person-pick ${x.id===p?.id?'active':''}" style="${personColorStyle(x)}" data-select-condition-person="${x.id}"><span class="person-picker-color"></span><strong>${escapeHtml(x.name)}</strong><small>${state.mode==='resident'?`${x.level} • ${ROTATION_LABELS[x.rotation]}`:`Staff • ขั้นต่ำรวม ${staffMinTotal(x)} เวร`}</small></button>`).join(''):'<div class="alert warning">ยังไม่มีรายชื่อ</div>';
+  byId('conditionPersonList').innerHTML=people().length?people().map(x=>`<button class="person-pick ${x.id===p?.id?'active':''}" style="${personColorStyle(x)}" data-select-condition-person="${x.id}"><span class="person-picker-color"></span><strong>${escapeHtml(x.name)}</strong><small>${state.mode==='resident'?`${x.level} • ${ROTATION_LABELS[x.rotation]}`:`Staff • ${staffMinTotal(x)>0?`ขั้นต่ำรวม ${staffMinTotal(x)} เวร`:'ไม่กำหนดขั้นต่ำ'}`}</small></button>`).join(''):'<div class="alert warning">ยังไม่มีรายชื่อ</div>';
   if(!p){byId('conditionHero').innerHTML='<h3>กรุณาเพิ่มรายชื่อก่อน</h3>';byId('conditionCalendar').innerHTML='';return;}
   ensurePersonConditions(p);
-  byId('conditionHero').innerHTML=`<div class="condition-person-head" style="${personColorStyle(p)}"><span></span><div><h3>${escapeHtml(p.name)}</h3><p>${state.mode==='resident'?`${p.level} • ${ROTATION_LABELS[p.rotation]} • เพดาน ${personCap(p)} เวร`:`Staff • ขั้นต่ำรวม ${staffMinTotal(p)} เวร • เพดานเวรจริง ${staffActualCap(p)} • On call ${p.onCallMax??'ไม่จำกัด'}`}</p></div></div>`;
-  byId('weekendOffCount').value=p.conditions.weekendOffCount||0;byId('personMaxOverride').value=p.maxOverride??'';byId('personOnCallMax').value=p.onCallMax??'';byId('personMinTotalDuty').value=p.minTotalDuty??'';byId('personMinTotalDuty').placeholder=`ค่าเริ่มต้นเดือนนี้ = ${governmentWorkdayCount()} เวร`;
+  byId('conditionHero').innerHTML=`<div class="condition-person-head" style="${personColorStyle(p)}"><span></span><div><h3>${escapeHtml(p.name)}</h3><p>${state.mode==='resident'?`${p.level} • ${ROTATION_LABELS[p.rotation]} • เพดาน ${personCap(p)} เวร`:`Staff • ${staffMinTotal(p)>0?`ขั้นต่ำรวม ${staffMinTotal(p)} เวร • `:''}เพดานเวรจริง ${staffActualCap(p)} • On call ${p.onCallMax??'ไม่จำกัด'}`}</p></div></div>`;
+  byId('weekendOffCount').value=p.conditions.weekendOffCount||0;byId('personMaxOverride').value=p.maxOverride??'';byId('personOnCallMax').value=p.onCallMax??'';byId('personMinTotalDuty').value=p.minTotalDuty??'';byId('personMinTotalDuty').placeholder='เว้นว่าง = ไม่กำหนดขั้นต่ำ';byId('staffWeekdayMorningOff').checked=state.mode==='staff'&&hasRequestedOffAllWeekdayMornings(p);
   byId('conditionMonthBadge').textContent=`${MONTHS_TH[state.month]} ${state.year+543}`;
   updatePaintToolbar();renderConditionCalendar(p);renderConditionList(p);
 }
@@ -1274,6 +1282,46 @@ function continueConditionPaint(e){if(!conditionPainting)return;const target=doc
 function endConditionPaint(){if(!conditionPainting)return;conditionPainting=false;conditionPaintVisited.clear();const p=selectedConditionPerson();if(p){saveState(false);renderConditionList(p);renderPeople();}}
 function dedupeConditions(p,type){
   ensurePersonConditions(p);const map=new Map();for(const c of p.conditions[type]){const key=c.date;const old=map.get(key)||{id:c.id,date:c.date,shifts:[]};old.shifts=[...new Set([...old.shifts,...c.shifts])];map.set(key,old);}p.conditions[type]=[...map.values()];
+}
+function staffWeekdayMorningDates(){
+  return monthDates().filter(date=>isWeekday(date)&&!holidayMap().has(date));
+}
+function hasRequestedOffAllWeekdayMornings(p){
+  if(state.mode!=='staff'||!p)return false;
+  const dates=staffWeekdayMorningDates();
+  if(!dates.length)return false;
+  return dates.every(date=>['M1','M2'].every(shift=>{
+    const type=conditionTypeAt(p,date,shift);
+    return type==='off'||type==='hardOff';
+  }));
+}
+function setRequestedOffPreservingMandatory(p,date,shift){
+  if(conditionTypeAt(p,date,shift)==='hardOff')return;
+  for(const type of ['off','avoid','request'])removeShiftFromType(p,type,date,shift);
+  let item=p.conditions.off.find(x=>x.date===date);
+  if(!item){
+    item={id:uid('c'),date,shifts:[]};
+    p.conditions.off.push(item);
+  }
+  if(!item.shifts.includes(shift))item.shifts.push(shift);
+}
+function toggleStaffWeekdayMorningOff(event){
+  const p=selectedConditionPerson();
+  if(!p||state.mode!=='staff')return;
+  ensurePersonConditions(p);
+  const checked=!!event.target.checked;
+  for(const date of staffWeekdayMorningDates()){
+    for(const shift of ['M1','M2']){
+      if(checked)setRequestedOffPreservingMandatory(p,date,shift);
+      else removeShiftFromType(p,'off',date,shift);
+    }
+  }
+  dedupeConditions(p,'off');
+  invalidateSchedule();
+  saveState(false);
+  renderConditionUI();
+  renderPeople();
+  toast(checked?'บันทึกขอ Off เวรเช้าวันธรรมดาทุกวันแล้ว':'ยกเลิกคำขอ Off เวรเช้าวันธรรมดาทุกวันแล้ว');
 }
 function removeCondition(personId,type,id){const p=getPerson(personId);if(!p)return;ensurePersonConditions(p);p.conditions[type]=p.conditions[type].filter(c=>c.id!==id);invalidateSchedule();saveState(false);renderConditionUI();renderPeople();}
 function updatePersonOverviewConditions(){ const p=selectedConditionPerson();if(!p)return;p.conditions.weekendOffCount=+byId('weekendOffCount').value||0;p.maxOverride=byId('personMaxOverride').value===''?null:+byId('personMaxOverride').value;p.onCallMax=byId('personOnCallMax').value===''?null:+byId('personOnCallMax').value;p.minTotalDuty=state.mode==='staff'?(byId('personMinTotalDuty').value===''?null:+byId('personMinTotalDuty').value):null;invalidateSchedule();saveState(false);renderPeople();renderConditionUI(); }
@@ -1359,7 +1407,7 @@ function preflightChecks(){
     const chiefs=ps.filter(p=>p.chiefEligible&&p.rotation!=='out_province_all').length,needChief=[...Object.values(state.settings.residentReq),...(state.settings.holidayStaffingDifferent?Object.values(state.settings.residentHolidayReq):[])].some(x=>x.chief);checks.push({ok:!needChief||chiefs>0,text:needChief?`มีผู้เป็น Chief ได้ ${chiefs} คน`:'ไม่ได้บังคับ Chief'});
     const totalCap=ps.reduce((a,p)=>a+personCap(p),0);checks.push({ok:totalCap>=d.actual,text:`โควตารวมโดยประมาณ ${totalCap} เทียบกับความต้องการ ${d.actual} ตำแหน่ง`});
   }else{
-    const realCap=ps.reduce((a,p)=>a+staffActualCap(p),0),ocCap=ps.reduce((a,p)=>a+(p.onCallMax??999),0),minTotal=ps.reduce((a,p)=>a+staffMinTotal(p),0),available=d.actual+d.oncall;checks.push({ok:realCap>=d.actual,text:`เพดานเวรจริงรวม ${realCap} เทียบความต้องการ ${d.actual}`});if(d.oncall)checks.push({ok:ocCap>=d.oncall,text:`เพดาน On call รวม ${ocCap>=900?'ไม่จำกัด':ocCap} เทียบความต้องการ ${d.oncall}`});checks.push({ok:available>=minTotal,text:`ตำแหน่งทั้งหมด ${available} เทียบกับผลรวมขั้นต่ำรายบุคคล ${minTotal}`});
+    const realCap=ps.reduce((a,p)=>a+staffActualCap(p),0),ocCap=ps.reduce((a,p)=>a+(p.onCallMax??999),0),minTotal=ps.reduce((a,p)=>a+staffMinTotal(p),0),available=d.actual+d.oncall;checks.push({ok:realCap>=d.actual,text:`เพดานเวรจริงรวม ${realCap} เทียบความต้องการ ${d.actual}`});if(d.oncall)checks.push({ok:ocCap>=d.oncall,text:`เพดาน On call รวม ${ocCap>=900?'ไม่จำกัด':ocCap} เทียบความต้องการ ${d.oncall}`});if(minTotal>0)checks.push({ok:available>=minTotal,text:`ตำแหน่งทั้งหมด ${available} เทียบกับผลรวมขั้นต่ำที่กำหนดเอง ${minTotal}`});
   }
   const conds=ps.reduce((a,p)=>{ensurePersonConditions(p);return a+p.conditions.hardOff.length+p.conditions.off.length+p.conditions.avoid.length+p.conditions.request.length;},0);checks.push({ok:true,text:`บันทึกเงื่อนไขแบบระบุวัน ${conds} รายการ`});
   const requestSlots=buildSlots(),requestBlocks=buildWeekendBlocks();let impossibleRequests=0;
@@ -1517,8 +1565,7 @@ function evaluateTrial(assignments,unfilled,stats,slots,weekendBlocks){
     }
     if(state.mode==='staff'){
       const minimum=staffMinTotal(p),deficit=Math.max(0,minimum-st.total);
-      if(deficit){score+=deficit*1800;issues.push(issue('high',`${p.name} ได้เวรรวม ${st.total} เวร ต่ำกว่าขั้นต่ำ ${minimum} เวร`,`เพิ่มเวรจริงหรือ On call ให้ ${p.name} อีก ${deficit} เวร หรือปรับขั้นต่ำรายบุคคลหากจำนวนตำแหน่งไม่เพียงพอ`));}
-      else score+=(st.total-minimum)*6;
+      if(minimum>0&&deficit){score+=deficit*1800;issues.push(issue('high',`${p.name} ได้เวรรวม ${st.total} เวร ต่ำกว่าขั้นต่ำที่กำหนดเอง ${minimum} เวร`,`เพิ่มเวรจริงหรือ On call ให้ ${p.name} อีก ${deficit} เวร หรือยกเลิกขั้นต่ำเฉพาะบุคคล`));}
     }
     score+=st.holiday*st.holiday*1.8;
     const avoidedAssignments=assignments.filter(a=>a.personId===p.id&&avoidMatches(p,a.date,a.shift));if(avoidedAssignments.length){score+=avoidedAssignments.length*320;issues.push(issue('low',`${p.name} ถูกจัดในช่วงไม่ Prefer ${avoidedAssignments.length} เวร`,`ระบบหลีกเลี่ยงแล้วแต่จำเป็นต่อความครบของตาราง ลองสลับ ${avoidedAssignments.slice(0,3).map(a=>`${fmtDate(a.date)} ${SHIFT_LABELS[a.shift]}`).join(', ')}`));}
@@ -1816,7 +1863,7 @@ function renderPersonalSchedule(){
   const aa=s.assignments.filter(a=>a.personId===id).sort((a,b)=>a.start-b.start);
   const st=s.stats[id]||{};
   const wb=s.weekendBlocks?.[id]||[];
-  let summary=`<div class="personal-color-title" style="${personColorStyle(p)}"><i></i><strong>${escapeHtml(p.name)}</strong></div><div class="summary-cards"><div class="metric-card"><small>เวรจริง</small><strong>${st.actual||0}</strong></div><div class="metric-card"><small>เช้า</small><strong>${(st.shifts?.M||0)+(st.shifts?.M1||0)+(st.shifts?.M2||0)}</strong></div><div class="metric-card"><small>บ่าย / ดึก</small><strong>${st.shifts?.E||0} / ${st.shifts?.N||0}</strong></div><div class="metric-card"><small>${state.mode==='staff'?'รวม / ขั้นต่ำ':'On call'}</small><strong>${state.mode==='staff'?`${st.total||0} / ${staffMinTotal(p)}`:(st.oncall||0)}</strong></div></div>`;
+  let summary=`<div class="personal-color-title" style="${personColorStyle(p)}"><i></i><strong>${escapeHtml(p.name)}</strong></div><div class="summary-cards"><div class="metric-card"><small>เวรจริง</small><strong>${st.actual||0}</strong></div><div class="metric-card"><small>เช้า</small><strong>${(st.shifts?.M||0)+(st.shifts?.M1||0)+(st.shifts?.M2||0)}</strong></div><div class="metric-card"><small>บ่าย / ดึก</small><strong>${st.shifts?.E||0} / ${st.shifts?.N||0}</strong></div><div class="metric-card"><small>${state.mode==='staff'?'รวมเวรทั้งหมด':'On call'}</small><strong>${state.mode==='staff'?(staffMinTotal(p)>0?`${st.total||0} / ขั้นต่ำ ${staffMinTotal(p)}`:`${st.total||0}`):(st.oncall||0)}</strong></div></div>`;
   if(wb.length)summary+=`<div class="alert success" style="margin-bottom:12px">จัด off สุดสัปดาห์ให้: ${wb.map(x=>fmtDate(x)).join(', ')}</div>`;
 
   const byDate=new Map();
@@ -1848,9 +1895,9 @@ function renderPersonalSchedule(){
   byId('personalSchedule').innerHTML=summary+calendar;
 }
 function renderSummarySchedule(){
-  const s=schedule();const rows=people().map(p=>{const st=s.stats[p.id]||{shifts:{},half:{}};const morning=(st.shifts.M||0)+(st.shifts.M1||0)+(st.shifts.M2||0);return `<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}</td>${state.mode==='resident'?`<td>${p.level}</td><td>${st.actual||0} / ${personCap(p)}</td><td>${st.half?.[1]||0} / ${halfCap(p,1)}</td><td>${st.half?.[2]||0} / ${halfCap(p,2)}</td>`:`<td><strong>${st.total||0} / ${staffMinTotal(p)}</strong></td><td>${st.actual||0} / ${staffActualCap(p)}</td>`}<td>${morning}</td><td>${st.shifts.E||0}</td><td>${st.shifts.N||0}</td><td>${st.holiday||0}</td>${state.mode==='staff'?`<td>${st.oncall||0}${p.onCallMax!==null?` / ${p.onCallMax}`:''}</td><td>${Number(st.weight||0).toFixed(2)}</td>`:''}</tr>`;}).join('');
-  const headers=state.mode==='resident'?['ชื่อ','ระดับ','รวม/เพดาน','ครึ่งแรก','ครึ่งหลัง','เช้า','บ่าย','ดึก','วันหยุด']:['ชื่อ','รวม/ขั้นต่ำ','เวรจริง','เช้า','บ่าย','ดึก','วันหยุด','On call','ภาระงานถ่วงน้ำหนัก'];
-  byId('summarySchedule').innerHTML=`<div class="schedule-table-wrap"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>${state.mode==='staff'?'<p class="hint" style="margin-top:10px">จำนวน “รวม/ขั้นต่ำ” นับเวรจริงทุกตำแหน่งรวม On call • Staff 2 ปกติคิดภาระงาน 0.65 เวร และวัน Activity ถึง 10:00 น. คิด 0.25 เวร</p>':''}`;
+  const s=schedule();const rows=people().map(p=>{const st=s.stats[p.id]||{shifts:{},half:{}};const morning=(st.shifts.M||0)+(st.shifts.M1||0)+(st.shifts.M2||0);return `<tr style="${personColorStyle(p)}"><td>${personNameHtml(p)}</td>${state.mode==='resident'?`<td>${p.level}</td><td>${st.actual||0} / ${personCap(p)}</td><td>${st.half?.[1]||0} / ${halfCap(p,1)}</td><td>${st.half?.[2]||0} / ${halfCap(p,2)}</td>`:`<td><strong>${st.total||0}</strong>${staffMinTotal(p)>0?` / ${staffMinTotal(p)}`:''}</td><td>${st.actual||0} / ${staffActualCap(p)}</td>`}<td>${morning}</td><td>${st.shifts.E||0}</td><td>${st.shifts.N||0}</td><td>${st.holiday||0}</td>${state.mode==='staff'?`<td>${st.oncall||0}${p.onCallMax!==null?` / ${p.onCallMax}`:''}</td><td>${Number(st.weight||0).toFixed(2)}</td>`:''}</tr>`;}).join('');
+  const headers=state.mode==='resident'?['ชื่อ','ระดับ','รวม/เพดาน','ครึ่งแรก','ครึ่งหลัง','เช้า','บ่าย','ดึก','วันหยุด']:['ชื่อ','รวมทั้งหมด / ขั้นต่ำถ้ามี','เวรจริง/เพดาน','เช้า','บ่าย','ดึก','วันหยุด','On call','ภาระงานถ่วงน้ำหนัก'];
+  byId('summarySchedule').innerHTML=`<div class="schedule-table-wrap"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>${state.mode==='staff'?'<p class="hint" style="margin-top:10px">จำนวน “รวมทั้งหมด” นับเวรจริงทุกตำแหน่งรวม On call • ไม่มีขั้นต่ำเริ่มต้น หากไม่กำหนดเอง • Staff 2 ปกติคิดภาระงาน 0.65 เวร และวัน Activity ถึง 10:00 น. คิด 0.25 เวร</p>':''}`;
 }
 function renderIssueSchedule(){const s=schedule();const issues=s.issues||[];byId('issueSchedule').innerHTML=issues.length?`<div class="issue-list">${issues.map(x=>`<div class="issue-card ${x.severity==='high'?'high':x.severity==='low'?'low':''}"><strong>${escapeHtml(x.title)}</strong><p>${escapeHtml(x.suggestion)}</p></div>`).join('')}</div>`:'<div class="alert success"><strong>ไม่พบปัญหาสำคัญ</strong><br>ตารางครบและคำขอหลักได้รับการจัดตามข้อจำกัดที่ตั้งไว้</div>';}
 
