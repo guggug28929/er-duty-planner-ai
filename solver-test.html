@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ER Duty Planner — Exact Solver Test</title>
+  <style>
+    :root {
+      font-family: Inter, "Noto Sans Thai", Tahoma, sans-serif;
+      color: #17323b;
+      background: #f3f7f7;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 28px; }
+    main { max-width: 1100px; margin: 0 auto; }
+    .card {
+      background: #fff;
+      border: 1px solid #dbe7e8;
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 12px 28px rgba(23, 50, 59, .08);
+    }
+    h1 { margin: 0 0 8px; }
+    h2 { margin: 0 0 14px; font-size: 20px; }
+    p { line-height: 1.65; }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 18px;
+      background: #0f766e;
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    .status {
+      display: inline-flex;
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-weight: 900;
+    }
+    .status.ok { background: #dcfce7; color: #166534; }
+    .status.fail { background: #fee2e2; color: #b91c1c; }
+    .muted { color: #64777e; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .metric {
+      border: 1px solid #dce7e8;
+      border-radius: 14px;
+      padding: 14px;
+      background: #fbfefe;
+    }
+    .metric small { color: #64777e; }
+    .metric strong { display: block; font-size: 22px; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      text-align: left;
+      padding: 11px 12px;
+      border-bottom: 1px solid #e2eaeb;
+      vertical-align: top;
+    }
+    th { background: #f6f9fa; }
+    .chief {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 900;
+      color: #8a5a00;
+      background: #fff4cf;
+      border-radius: 999px;
+      padding: 2px 7px;
+      margin-left: 5px;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #10282f;
+      color: #e8ffff;
+      border-radius: 12px;
+      padding: 16px;
+      line-height: 1.55;
+    }
+    @media (max-width: 760px) {
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      body { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>ทดสอบ Exact Solver</h1>
+      <p class="muted">
+        ชุดทดสอบ 7 วัน มี 3 เวรต่อวัน เวรละ 2 คน พร้อม Chief,
+        OFF บังคับ, ไม่ Prefer, ขออยู่ และห้ามเวรติดกัน
+      </p>
+      <button id="runButton">เริ่มทดสอบ OR-Tools</button>
+    </section>
+
+    <section class="card" id="resultCard" hidden>
+      <h2>ผลการคำนวณ</h2>
+      <div id="statusBox"></div>
+      <div class="metrics" id="metrics"></div>
+      <div id="scheduleTable"></div>
+    </section>
+
+    <section class="card" id="personCard" hidden>
+      <h2>สรุปรายบุคคล</h2>
+      <div id="personTable"></div>
+    </section>
+
+    <section class="card" id="rawCard" hidden>
+      <h2>JSON สำหรับตรวจสอบ</h2>
+      <pre id="rawJson"></pre>
+    </section>
+  </main>
+
+  <script>
+    const runButton = document.getElementById("runButton");
+    const resultCard = document.getElementById("resultCard");
+    const personCard = document.getElementById("personCard");
+    const rawCard = document.getElementById("rawCard");
+    const statusBox = document.getElementById("statusBox");
+    const metrics = document.getElementById("metrics");
+    const scheduleTable = document.getElementById("scheduleTable");
+    const personTable = document.getElementById("personTable");
+    const rawJson = document.getElementById("rawJson");
+
+    const shiftLabels = {
+      M: "เช้า 08–16",
+      E: "บ่าย 16–24",
+      N: "ดึก 24–08"
+    };
+
+    runButton.addEventListener("click", async () => {
+      runButton.disabled = true;
+      runButton.textContent = "กำลังให้ Exact Solver คำนวณ…";
+
+      try {
+        const response = await fetch("/api/solver-test");
+        const data = await response.json();
+
+        if (!response.ok || !data.ok) {
+          throw new Error(data.message || "Exact Solver ทดสอบไม่สำเร็จ");
+        }
+
+        const result = data.result;
+
+        statusBox.innerHTML = `
+          <p>
+            สถานะ:
+            <span class="status ${result.isFeasible ? "ok" : "fail"}">
+              ${result.status}
+            </span>
+          </p>
+          <p class="muted">${data.testCase}</p>
+        `;
+
+        metrics.innerHTML = `
+          <div class="metric">
+            <small>Solver</small>
+            <strong>CP-SAT</strong>
+          </div>
+          <div class="metric">
+            <small>เวลาคำนวณ</small>
+            <strong>${result.wallTimeSeconds}s</strong>
+          </div>
+          <div class="metric">
+            <small>ตำแหน่งทั้งหมด</small>
+            <strong>${result.schedule.length * 2}</strong>
+          </div>
+          <div class="metric">
+            <small>Objective</small>
+            <strong>${result.objective}</strong>
+          </div>
+        `;
+
+        scheduleTable.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>วัน</th>
+                <th>เวร</th>
+                <th>ผู้ปฏิบัติงาน</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${result.schedule.map(item => `
+                <tr>
+                  <td>วันที่ ${item.day}</td>
+                  <td>${shiftLabels[item.shift]}</td>
+                  <td>
+                    ${item.assigned.map(person => `
+                      <div>
+                        ${person.name}
+                        ${person.chiefEligible ? '<span class="chief">Chief ได้</span>' : ''}
+                      </div>
+                    `).join("")}
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+
+        personTable.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>ชื่อ</th>
+                <th>สิทธิ์ Chief</th>
+                <th>จำนวนเวร</th>
+                <th>รายการเวร</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${result.people.map(person => `
+                <tr>
+                  <td>${person.name}</td>
+                  <td>${person.chiefEligible ? "ได้" : "ไม่ได้"}</td>
+                  <td><strong>${person.total}</strong></td>
+                  <td>
+                    ${person.assignments.map(item =>
+                      `วันที่ ${item.day} ${shiftLabels[item.shift]}`
+                    ).join(", ")}
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+
+        rawJson.textContent = JSON.stringify(data, null, 2);
+
+        resultCard.hidden = false;
+        personCard.hidden = false;
+        rawCard.hidden = false;
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        runButton.disabled = false;
+        runButton.textContent = "ทดสอบอีกครั้ง";
+      }
+    });
+  </script>
+</body>
+</html>
