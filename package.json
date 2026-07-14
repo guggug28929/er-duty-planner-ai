@@ -1,10 +1,13 @@
 {
   "name": "er-duty-planner-ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "ER Duty Planner with Vercel backend and AI-assisted schedule audit",
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "openai": "^5.12.2"
   }
 }
